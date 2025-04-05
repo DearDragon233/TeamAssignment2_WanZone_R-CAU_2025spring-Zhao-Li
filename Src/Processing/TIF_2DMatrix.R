@@ -8,8 +8,8 @@ r <- rast("Data/Raw/glc2000_v1_1.tif")
 # 2 倍降采样，减少数据量
 r <- aggregate(r, fact=2)
 
-# 转换为矩阵，保留图像中的排列格式
-mat <- matrix(r,nrow = nrow(r))
+# 转换为矩阵，保留图像中的排列格式，注意应按行填充
+mat <- matrix(r,nrow = nrow(r),byrow = T)
 
 # 处理在转化过程中出现的小数，进行取整
 mat <- round(mat)
