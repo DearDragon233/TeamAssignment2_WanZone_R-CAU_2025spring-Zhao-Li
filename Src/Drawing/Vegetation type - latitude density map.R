@@ -3,8 +3,8 @@ library(reshape2) # 用于转换为长格式
 library(ggplot2)  # 伟大，无需多言（
 
 # 加载数据
-load("Data/Processed/land_fraction_df.RData") # 植被分布信息
-load("Data/Processed/plant_colors.RData")     # 图例颜色信息
+load("Data/Processed/land_fraction_df.RData") # 植被分布信息，变量land_fraction_df
+load("Data/Processed/plant_colors.RData")     # 图例颜色信息，变量plant_colors
 
 # 数据框长格式转换
 land_fraction_long <- melt(land_fraction_df, id.vars = "Latitude",
