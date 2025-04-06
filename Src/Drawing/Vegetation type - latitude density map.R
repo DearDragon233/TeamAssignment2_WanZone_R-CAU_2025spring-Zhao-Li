@@ -24,4 +24,4 @@ ggplot(land_fraction_long, aes(x = Latitude, y = Fraction, fill = Vegetation)) +
   coord_flip()                      # 旋转图像匹配地图方向
 
 # 存储图像
-ggsave("Plots/植被类型占陆地比例-纬度密度图.png",width = 8, height = 10)
+ggsave("Plots/植被类型占陆地比例-纬度密度图.png",width = 3.11, height = 7)
