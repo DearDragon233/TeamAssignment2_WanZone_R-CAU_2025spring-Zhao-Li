@@ -10,8 +10,6 @@ crs(tif_file) <- "EPSG:4326"
 # 手动指定经纬度范围与像素对应信息（来自文件"glc2000_v1_1_projinfo.hdr"）
 # 经纬度范围
 ext(tif_file) <- ext(-180.000000, 179.991070, -56.008928, 89.991071)
-# 像素对应范围
-res(tif_file) <- c(0.0089285714, 0.0089285714)
 
 # 2 倍降采样，减少数据量
 tif_file <- aggregate(tif_file, fact=2)
@@ -28,6 +26,12 @@ dev.off()  # 关闭设备
 # 注意到并经了解，此投影下同纬度下像素对应面积相同
 # 为提升存储效率，只存第一列（一维向量）
 area_vector <- unlist(pixel_area[,1],use.names = F)
+
+# 计算每行中心纬度
+latitudes <- terra::yFromRow(pixel_area, 1:nrow(pixel_area))
+
+# 将纬度作为向量元素名称
+names(area_vector) <- latitudes
 
 # 保存为.RData文件
 save(area_vector, file = "Data/Processed/Pixel_area_Latitude.RData")
