@@ -5,3 +5,8 @@
 2. 国家地理系统科学数据中心：【中国10年平均水热条件变化公里网格数据集（1951-2010）】+“中国10年平均水热条件变化公里网格数据集（1951-2010）-数据实体.rar”
 3. 中华人民共和国农业农村部：【耕地问题调查】+“1996年至2008年，年均净减少超过1000万亩；2009年至2019年，年均净减少超过1100万亩”
 4. 北京师范大学学报（自然科学版）：【全球耕地与粮食产量的时空演变及空间格局研究 】+“人均耕地面积是衡量全球耕地资源安全状况的重要指标， 近60 a来，全球人口增长速度过快，远超过耕地增长速度，人均耕地面积呈现减少的趋势”
+5.https://www.worldclim.org/data/worldclim21.html：WorldClim+
+“Citation:Fick, S.E. and R.J. Hijmans, 2017. WorldClim 2: new 1km spatial resolution climate surfaces for global land areas. International Journal of Climatology 37 (12): 4302-4315.”
+6.https://github.com/globalmaps/gm_el_v1：DEM +
+“Users shall mark the data source and indicate copyright on the product when they use the data.
+Credit: "Global Map - Global version - Version 1 © Geospatial Information Authority of Japan"”
