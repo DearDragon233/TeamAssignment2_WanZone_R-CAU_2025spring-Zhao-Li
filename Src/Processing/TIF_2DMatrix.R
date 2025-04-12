@@ -12,21 +12,19 @@ crs(r) <- "EPSG:4326"
 # 经纬度范围
 ext(r) <- ext(-180.000000, 179.991070, -56.008928, 89.991071)
 
-# 2 倍降采样，减少数据量
-r <- aggregate(r, fact=2)
+# 2 倍降采样，减少数据量（使用众数方法，防止出现小数或错误）
+r_lowres <- aggregate(r, fun = "modal", fact=2)
+
+
+# 默认输出是小数，进行取整
+r_lowres <- round(r_lowres)
 
 # 转换为矩阵，保留图像中的排列格式，注意应按行填充
-mat <- matrix(r,nrow = nrow(r),byrow = T)
-
-# 处理在转化过程中出现的小数，进行取整
-mat <- round(mat)
-
-# 查看矩阵的维度
-dim(mat)
+mat <- matrix(r_lowres,nrow = nrow(r_lowres),byrow = T)
 
 # 计算每行中心经度、纬度
-longitudes <- terra::xFromCol(r, 1:ncol(r))
-latitudes <- terra::yFromRow(r, 1:nrow(r))
+longitudes <- terra::xFromCol(r, 1:ncol(r_lowres))
+latitudes <- terra::yFromRow(r, 1:nrow(r_lowres))
 
 # 将经纬度作为矩阵行列名
 colnames(mat) <- longitudes
