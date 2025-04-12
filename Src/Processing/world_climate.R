@@ -59,3 +59,65 @@ head(climate_df)     # 查看前几行
 nrow(climate_df)     # 查看行数
 ncol(climate_df)     # 查看列数
 summary(climate_df)  # 简要统计（可看是否有 NA、极值等）
+
+library(terra)
+
+# 通用函数：读取 tif 文件夹，求平均或总和后转为矩阵
+process_variable <- function(path, varname, method = c("mean", "sum")) {
+  files <- list.files(path, pattern = "\\.tif$", full.names = TRUE)
+  message("📂 处理变量：", varname, "，共 ", length(files), " 个文件...")
+  
+  r <- rast(files)
+  if (method == "mean") {
+    r_avg <- mean(r)
+  } else {
+    r_avg <- sum(r)
+  }
+  
+  mat <- matrix(values(r_avg), nrow = nrow(r_avg), ncol = ncol(r_avg), byrow = TRUE)
+  mat <- round(mat, 1)
+  
+  save(mat, file = paste0("Data/Processed/", varname, "_mat.RData"), compress = "xz")
+  message("✅ 已保存：", varname, "_mat.RData")
+}
+
+# === 各变量分别调用 ===
+process_variable("Data/Resource/2000tmin",   "tmin",          method = "mean")
+process_variable("Data/Resource/2000tmax",   "tmax",          method = "mean")
+process_variable("Data/Resource/2000prec",   "precipitation", method = "sum")
+
+str(dem_matrix)          # 查看结构（维度、前几项内容）
+
+dim(dem_matrix)   # 查看行数和列数
+length(dem_matrix)       # 元素总个数（行×列）
+object.size(dem_matrix)  # 占用内存大小（单位：字节）
+
+summary(as.vector(mat))  # 快速统计最小值、最大值、四分位数
+range(mat, na.rm = TRUE) # 最小/最大值
+mean(mat, na.rm = TRUE)  # 平均值
+
+library(terra)
+
+# === 1. 读取 & 合并 DEM 数据 ===
+dem_files <- list.files("Data/Resource/DEM", pattern = "\\.tif$", full.names = TRUE)
+dem_tiles <- lapply(dem_files, rast)
+dem_merged <- do.call(merge, dem_tiles)
+
+# === 2. 降采样（例如每4×4像素合成1个） ===
+# 修改 factor 值可以控制压缩比（2 = 缩小4倍，4 = 缩小16倍）
+factor <- 4
+dem_reduced <- aggregate(dem_merged, fact = factor, fun = mean)
+
+# === 3. 转为矩阵格式 ===
+dem_matrix <- as.matrix(dem_reduced, wide = TRUE)
+
+# === 4. 保存为压缩 .RData 文件 ===
+save(dem_matrix, file = "Data/Processed/elevation_matrix_reduced.RData", compress = "gzip")
+
+str(dem_matrix)          # 查看结构（维度、前几项内容）
+dim(dem_matrix)   # 查看行数和列数
+length(dem_matrix)       # 元素总个数（行×列）
+object.size(dem_matrix)  # 占用内存大小（单位：字节）
+summary(as.vector(dem_matrix))  # 快速统计最小值、最大值、四分位数
+range(mat, na.rm = TRUE) # 最小/最大值
+mean(mat, na.rm = TRUE)  # 平均值
