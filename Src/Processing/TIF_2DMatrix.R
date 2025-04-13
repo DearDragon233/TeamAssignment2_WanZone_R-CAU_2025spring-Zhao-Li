@@ -23,8 +23,8 @@ r_lowres <- round(r_lowres)
 mat <- matrix(r_lowres,nrow = nrow(r_lowres),byrow = T)
 
 # 计算每行中心经度、纬度
-longitudes <- terra::xFromCol(r, 1:ncol(r_lowres))
-latitudes <- terra::yFromRow(r, 1:nrow(r_lowres))
+longitudes <- terra::xFromCol(r_lowres, 1:ncol(r_lowres))
+latitudes <- terra::yFromRow(r_lowres, 1:nrow(r_lowres))
 
 # 将经纬度作为矩阵行列名
 colnames(mat) <- longitudes
