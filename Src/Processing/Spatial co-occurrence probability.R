@@ -1,62 +1,77 @@
 # 加载R包
 library(readxl)
-library(reshape2) # 用于转换为长格式
-library(ggplot2)  # 伟大，无需多言（
+library(reshape2)   # 用于转换为长格式
+library(ggplot2)    # 伟大，无需多言（
+library(gridExtra)  # 用于拼接图像
 
+# -------------------------------
+# 1. 数据准备与参数设定
+# -------------------------------
 # 加载数据
 load("Data/Processed/TIF_2DMatrix.RData")         # 植被分布，对象为mat
 
-n_types <- 23  # 植被类型数
+# 定义植被种类总数与所需数据
+n_types <- 23
+nrow_mat <- nrow(mat)
+ncol_mat <- ncol(mat)
 
-# 初始化一个 23x23 的共现矩阵
-prob_matrix <- matrix(0, nrow = 23, ncol = 23)
+# -------------------------------
+# 2. 利用向量化方法构造共现矩阵（八邻域）
+# -------------------------------
+# 初始化共现矩阵：行为中心植被类型，列为邻域中实际出现的植被类型
+co_occurrence <- matrix(0, nrow = n_types, ncol = n_types)
 
-# 定义 8 个邻域偏移量（不包含中心像元）
-offsets <- expand.grid(dx = -1:1, dy = -1:1)
-offsets <- offsets[!(offsets$dx == 0 & offsets$dy == 0), ]
+# 构造 8 个邻域偏移量（3x3 范围，除去中心）
+offsets <- expand.grid(dr = -1:1, dc = -1:1)
+offsets <- offsets[!(offsets$dr == 0 & offsets$dc == 0), ]
 
-# 对于每一种邻域偏移，统计中心像元与邻居的类型配对
-for(k in 1:nrow(offsets)){
-  dx <- offsets$dx[k]
-  dy <- offsets$dy[k]
+# 对每个偏移量一次性处理整个有效区域，提高效率
+for(idx in 1:nrow(offsets)){
+  dr <- offsets$dr[idx]
+  dc <- offsets$dc[idx]
   
-  # 为了保证索引有效，需要确定两个矩阵切片的起止位置
-  i_from <- max(1, 1 - dx)
-  i_to   <- min(nrow(mat), nrow(mat) - dx)
-  j_from <- max(1, 1 - dy)
-  j_to   <- min(ncol(mat), ncol(mat) - dy)
+  # 确定当前偏移下的中心区域索引（确保移位后不越界）
+  i_from <- max(1, 1 - dr)
+  i_to   <- min(nrow_mat, nrow_mat - dr)
+  j_from <- max(1, 1 - dc)
+  j_to   <- min(ncol_mat, ncol_mat - dc)
   
-  # 中心像元和其对应邻居
-  central <- mat[i_from:i_to, j_from:j_to]
-  neighbor <- mat[(i_from + dx):(i_to + dx), (j_from + dy):(j_to + dy)]
+  # 取出中心区域及对应的邻域区域
+  central_block <- mat[i_from:i_to, j_from:j_to]
+  neighbor_block <- mat[(i_from + dr):(i_to + dr), (j_from + dc):(j_to + dc)]
   
-  # 将矩阵转为向量进行配对统计
-  central_vec <- as.vector(central)
-  neighbor_vec <- as.vector(neighbor)
+  # 转换为向量，统计二者配对次数
+  central_vec <- as.vector(central_block)
+  neighbor_vec <- as.vector(neighbor_block)
+  counts <- table(factor(central_vec, levels = 1:n_types),
+                  factor(neighbor_vec, levels = 1:n_types))
   
-  # 累加每一对出现的次数
-  for(idx in seq_along(central_vec)){
-    type_center <- central_vec[idx]
-    type_neighbor <- neighbor_vec[idx]
-    prob_matrix[type_center, type_neighbor] <- prob_matrix[type_center, type_neighbor] + 1
-  }
+  # 累加当前偏移所贡献的计数
+  co_occurrence <- co_occurrence + as.matrix(counts)
 }
 
-# 计算每个植被类型的邻域概率分布
-# 即对每一行归一化，得到当中心为某类型时，邻居为某类型的概率
-prob_matrix <- t(apply(prob_matrix, 1, function(x) {
-  if(sum(x) > 0) x / sum(x) else rep(0, n_types)
-}))
+# -------------------------------
+# 3. 计算邻域概率矩阵
+# -------------------------------
+# 对每行归一化，得到每个中心植被的邻域概率
+prob_matrix <- matrix(0, nrow = n_types, ncol = n_types)
+for(i in 1:n_types){
+  total_neighbors <- sum(co_occurrence[i, ])
+  if(total_neighbors > 0){
+    prob_matrix[i, ] <- co_occurrence[i, ] / total_neighbors
+  }
+}
+# 完全随机分布时，各类型概率应为 1/n_types，作为基准
+expected_value <- 1 / n_types
 
-# 查看概率矩阵
-print(prob_matrix)
+# -------------------------------
+# 4. 计算偏差矩阵（实际概率减去期望值）
+# -------------------------------
+deviation_matrix <- prob_matrix - expected_value
 
-# 若未安装以下包，请首先安装：
-# install.packages(c("ggplot2", "reshape2"))
-
-library(ggplot2)
-library(reshape2)
-
+# -------------------------------
+# 5. 分离成对角线与非对角线两部分，并分别归一化
+# -------------------------------
 # 写入植被类型的对应简化翻译，用于作图
 translations <- c(
   "阔叶常绿",
@@ -84,43 +99,68 @@ translations <- c(
   "无数据"
 )
 
-colnames(prob_matrix) <- translations
-rownames(prob_matrix) <- translations
+# 对角线部分：种内共现偏差
+diag_values <- diag(deviation_matrix)
+# 单独归一化对角线，使得最大绝对值等于1
+diag_max <- max(abs(diag_values))
+norm_diag_values <- diag_values / diag_max
 
-# 自身共现：对角线数据
-self_matrix <- diag(prob_matrix)   # 一个向量，各植被自身出现的频次
-df_self <- data.frame(Vegetation = factor(1:n_types),
-                      Frequency = self_matrix)
+# 构造数据框用于柱状图
+diag_df <- data.frame(Vegetation = translations,
+                      Normalized_Deviation = norm_diag_values)
 
-# 非对角线共现：将对角线设为 NA
-other_matrix <- prob_matrix
-diag(other_matrix) <- NA
-# 转换为长格式用于绘制热图
-if(!require(reshape2)) install.packages("reshape2")
+# 手动因子化植被名，保证作图时顺序不变
+diag_df$Vegetation <- factor(diag_df$Vegetation, levels = unique(diag_df$Vegetation))
+
+# 非对角线部分：种间共现偏差
+off_diag_matrix <- deviation_matrix
+diag(off_diag_matrix) <- NA  # 去掉对角线
+off_diag_max <- max(abs(off_diag_matrix), na.rm = TRUE)
+norm_off_diag_matrix <- off_diag_matrix / off_diag_max
+
+# 写入翻译
+colnames(norm_off_diag_matrix) <- translations
+rownames(norm_off_diag_matrix) <- translations
+
+# 转换为长格式数据，仅保留非NA（非对角线）数据
+if(!require(reshape2)) install.packages("reshape2", dependencies = TRUE)
 library(reshape2)
-melted_other <- melt(other_matrix, na.rm = TRUE)
-colnames(melted_other) <- c("Center_Type", "Neighbor_Type", "Frequency")
+melted_off_diag <- melt(norm_off_diag_matrix, varnames = c("Center_Type", "Neighbor_Type"),
+                        na.rm = TRUE)
+colnames(melted_off_diag) <- c("Center_Type", "Neighbor_Type", "Normalized_Deviation")
 
-## 绘图（使用 ggplot2）
-if(!require(ggplot2)) install.packages("ggplot2")
-library(ggplot2)
+# -------------------------------
+# 6. 分别作图：先单独作图，再联合显示
+# -------------------------------
+# 绘制对角线部分（种内共现）的柱状图
+p_diag <- ggplot(diag_df, aes(x = Vegetation, y = Normalized_Deviation, fill = Normalized_Deviation)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-1, 1)) +
+  labs(title = "标准化种内共现偏差（归一化后）",
+       x = "植被类型", y = "归一化偏差") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12)) +
+  guides(fill=FALSE) +
+  theme(axis.text.x = element_text(angle = 90)) # 旋转标签防止重叠
 
-# 图1：显示各植被自身共现（对角线），用柱状图
-p1 <- ggplot(df_self, aes(x = Vegetation, y = Frequency)) +
-  geom_bar(stat = "identity", fill = "darkgreen") +
-  labs(title = "各植被自身共现（对角线）",
-       x = "植被类型", y = "共现频次") +
-  theme_minimal()
-
-# 图2：显示不同植被间的共现（非对角线），用热图
-p2 <- ggplot(melted_other, aes(x = factor(Neighbor_Type), y = factor(Center_Type), fill = Frequency)) +
+# 绘制非对角线部分（种间共现）的热图
+p_off <- ggplot(melted_off_diag, aes(x = factor(Neighbor_Type), y = factor(Center_Type),
+                                     fill = Normalized_Deviation)) +
   geom_tile(color = "white") +
-  scale_fill_gradient(low = "white", high = "steelblue", na.value = "grey90") +
-  labs(title = "不同植被间共现（非对角线）",
-       x = "邻域植被类型", y = "中心植被类型") +
-  theme_minimal()+
-  theme(axis.text.x = element_text(angle = 90))
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-1, 1)) +
+  labs(title = "标准化种间共现偏差（归一化后）",
+       x = "邻域植被类型", y = "中心植被类型",
+       fill = "归一化偏差") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12)) +
+  theme(axis.text.x = element_text(angle = 90)) # 旋转标签防止重叠
 
-# 打印两幅图
-print(p1)
-print(p2)
+# 拼接图像并储存为PNG
+png("Plots/空间共线性分析.png", width = 1920, height = 1080,res = 170)
+grid.arrange(p_diag, p_off, ncol = 2, widths = c(0.4, 0.6))
+dev.off()
+
