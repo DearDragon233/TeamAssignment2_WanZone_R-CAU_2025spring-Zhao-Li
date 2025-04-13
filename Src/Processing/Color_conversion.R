@@ -1,4 +1,3 @@
-# 加载R包
 library(readxl)
 library(scales)   # 用于颜色转换
 

@@ -1,18 +1,20 @@
-library(terra)  # 或 raster
-tif <- rast("Data/Raw/glc2000_v1_1.tif")  # 加载 TIF
+library(terra)
+
+#加载文件
+tif <- rast("Data/Raw/glc2000_v1_1.tif") 
 
 # 提取像素值并统计频率
 terrain_values <- values(tif)
 terrain_freq <- table(terrain_values)
 terrain_prob <- terrain_freq / sum(terrain_freq)
 
-# Shannon 熵
+# 计算熵
 entropy <- -sum(terrain_prob * log2(terrain_prob))
 
-# 最大类别占比
+# 计算最大类别占比
 dominance_ratio <- max(terrain_prob)
 
-# 有效类别数
+# 计算有效类别数
 effective_classes <- 2^entropy
 
 library(ggplot2)
@@ -29,11 +31,6 @@ ggplot(data.frame(x = c("熵", "有效类别数"),
   theme_minimal(base_size = 14) +
   labs(title = "地形多样性指标", x = NULL, y = NULL)
 
-
-# Gini系数（不严格，但可参考）
-terrain_freq <- table(terrain_values)
-terrain_prob <- terrain_freq / sum(terrain_freq)  # 归一化
-
 # 正确计算 Gini 系数
 gini_index <- function(p) {
   n <- length(p)
@@ -44,7 +41,7 @@ gini <- gini_index(as.numeric(terrain_prob))
 
 library(fmsb)
 
-# 指标准备
+# 列指标
 quality_metrics <- data.frame(
   Gini = gini,
   最大占比 = dominance_ratio,

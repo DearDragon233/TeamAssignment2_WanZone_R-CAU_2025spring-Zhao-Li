@@ -28,7 +28,7 @@ sampling_interval <- 50  # 增大采样间隔，减少样本数量
 mat_sampled <- mat[seq(1, nrow(mat), by = sampling_interval),
                    seq(1, ncol(mat), by = sampling_interval)]
 
-# 转换为布尔矩阵（只保留森林类型值的位置）
+# 转换为布尔矩阵
 is_forest <- mat_sampled %in% forest_values
 
 # 获取仅包含森林类型的行列索引
@@ -46,7 +46,7 @@ forest_values_at_indices <- mat_sampled[forest_indices]
 latitudes <- as.numeric(rownames(mat_sampled))[forest_indices[, 1]]
 longitudes <- as.numeric(colnames(mat_sampled))[forest_indices[, 2]]
 
-# 创建数据框以便绘制
+# 创建数据框
 melted_mat <- data.frame(
   latitude = latitudes,
   longitude = longitudes,
