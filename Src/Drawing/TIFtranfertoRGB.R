@@ -3,7 +3,7 @@ library(readxl)
 library(terra)
 
 # 读取 Excel 图例文件
-legend_file <- "D:/r course/learnR/Topic4/glc2000_v1_1_Tiff/Tiff/Global_Legend.xls"
+legend_file <- "Data/raw/Global_Legend.xls"
 legend <- read_excel(legend_file)
 colnames(legend) <- c("VALUE", "CLASSNAMES", "Red", "Green", "Blue")
 
@@ -15,7 +15,7 @@ legend$Green <- legend$Green * 255
 legend$Blue <- legend$Blue * 255
 
 # 读取原始分类栅格
-tif_file <- "D:/r course/learnR/Topic4/glc2000_v1_1_Tiff/Tiff/glc2000_v1_1.tif"
+tif_file <- "Data/raw/glc2000_v1_1.tif"
 r <- rast(tif_file)
 
 # 方法：使用分类替换生成RGB各波段
@@ -39,7 +39,7 @@ rgb_raster <- as.int(rgb_raster)  # 设置数据类型
 
 # 可视化与输出
 plot(rgb_raster)
-output_file <- "D:/r course/learnR/Topic4/glc2000_v1_1_Tiff/Tiff/rgb_image.tif"
+output_file <- "Plots/rgb_image.tif"
 writeRaster(rgb_raster, filename = output_file, 
             datatype = "INT1U",  # 指定8位整型
             overwrite = TRUE)
