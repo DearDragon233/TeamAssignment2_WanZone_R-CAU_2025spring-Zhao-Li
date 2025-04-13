@@ -28,16 +28,11 @@ sampling_interval <- 30  # 增大采样间隔，减少样本数量
 mat_sampled <- mat[seq(1, nrow(mat), by = sampling_interval),
                    seq(1, ncol(mat), by = sampling_interval)]
 
-<<<<<<< HEAD
 # 转换为布尔矩阵（只保留森林类型值的位置）
 is_forest <- matrix(mat_sampled %in% forest_values,
                     nrow = nrow(mat_sampled),
                     ncol = ncol(mat_sampled))
-=======
-# 转换为布尔矩阵
-is_forest <- mat_sampled %in% forest_values
 
->>>>>>> abbcbf9cfbaddf96b757d76844edf0bdd5e35d81
 # 获取仅包含森林类型的行列索引
 forest_indices <- which(is_forest, arr.ind = TRUE)
 
