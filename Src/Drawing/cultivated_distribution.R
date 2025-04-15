@@ -8,7 +8,7 @@ load("Data/Processed/TIF_2DMatrix.RData") #植被分布信息，变量mat
 cultivated_values <- c(16)
 
 # 设置采样间隔
-sampling_interval <- 30
+sampling_interval <- 10
 
 # 采样矩阵
 mat_sampled <- mat[seq(1, nrow(mat), by = sampling_interval),
