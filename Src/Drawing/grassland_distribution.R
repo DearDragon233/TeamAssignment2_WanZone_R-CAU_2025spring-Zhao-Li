@@ -6,7 +6,7 @@ load("Data/Processed/TIF_2DMatrix.RData")
 # 草地类别值
 grassland_values <- c(13, 14, 15)
 # 设置采样的间隔
-sampling_interval <- 30
+sampling_interval <- 10
 # 采样矩阵
 mat_sampled <- mat[seq(1, nrow(mat), by = sampling_interval),
                    seq(1, ncol(mat), by = sampling_interval)]
