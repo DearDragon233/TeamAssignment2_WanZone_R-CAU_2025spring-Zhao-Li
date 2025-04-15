@@ -1,3 +1,4 @@
+# 加载R包
 library(terra) 
 
 # 读取tif
@@ -6,11 +7,8 @@ tif_file <- rast("Data/Raw/glc2000_v1_1.tif")
 # 手动添加坐标系信息
 crs(tif_file) <- "EPSG:4326"
 
-# 手动指定经纬度范围
-ext(tif_file) <- ext(-180.000000, 179.991070, -56.008928, 89.991071)
-
 # 降倍采样
-tif_file <- aggregate(tif_file, fact=2)
+tif_file <- aggregate(tif_file, fact=3)
 
 # 返回每个像素的面积
 pixel_area <- cellSize(tif_file)
