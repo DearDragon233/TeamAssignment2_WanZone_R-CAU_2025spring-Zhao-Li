@@ -101,6 +101,7 @@ translations <- c(
 
 # 对角线部分：种内共现偏差
 diag_values <- diag(deviation_matrix)
+
 # 单独归一化对角线，使得最大绝对值等于1
 diag_max <- max(abs(diag_values))
 norm_diag_values <- diag_values / diag_max
