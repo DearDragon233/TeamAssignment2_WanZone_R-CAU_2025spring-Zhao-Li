@@ -46,7 +46,7 @@ ggplot(df_row_fra, aes(x = rowname, y = count)) +
   labs(title = "农田占陆地比例-纬度图",
        x = "纬度",
        y = "农田占陆地比例") +
-  scale_y_continuous(limits = c(0, 0.6)) +                # 设置 y 轴范围
+  scale_y_continuous(limits = c(0, 0.65)) +                # 设置 y 轴范围
   scale_x_continuous(limits = c(-56.008928, 89.991071)) + # 设置 x 轴范围
   theme_minimal() +
   coord_flip()                      # 旋转图像匹配地图方向
