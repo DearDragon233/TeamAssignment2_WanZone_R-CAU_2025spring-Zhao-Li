@@ -51,6 +51,10 @@ quality_metrics <- data.frame(
 # 添加最大值和最小值行作为雷达图格式要求
 quality_metrics <- rbind(rep(1, 4), rep(0, 4), quality_metrics)
 
+# 导出为PNG
+png("Plots/terrain_quality_radarchart.png", width = 924, height = 682, res = 150)
+
+# 绘制雷达图
 radarchart(quality_metrics,
            axistype = 1,
            pcol = "darkorange", pfcol = rgb(1, 0.5, 0.2, 0.3),
@@ -59,3 +63,4 @@ radarchart(quality_metrics,
            axislabcol = "grey40", vlcex = 0.9,
            title = "地形质量指标雷达图")
 
+dev.off()
