@@ -1,5 +1,7 @@
 library(ggplot2)
 library(reshape2)
+library(rnaturalearth)
+library(rnaturalearthdata)
 
 # 加载数据
 load("Data/Processed/TIF_2DMatrix.RData")
@@ -23,16 +25,53 @@ melted_mat <- melt(is_grassland, varnames = c("latitude", "longitude"), value.na
 melted_mat$latitude <- as.numeric(as.character(melted_mat$latitude))
 melted_mat$longitude <- as.numeric(as.character(melted_mat$longitude))
 
-# 导出为PNG
+# 获取大陆轮廓数据
+world <- ne_countries(scale = "medium", returnclass = "sf")
+# 导出为 PNG
 png("Plots/grassland_distribution.png", width = 924, height = 684, res = 150)
 
 # 绘图
-ggplot(melted_mat, aes(x = longitude, y = latitude, alpha = is_grassland)) +
-  geom_raster(fill = "forestgreen") +
-  scale_alpha_manual(values = c("FALSE" = 0, "TRUE" = 1),  name = "是否为草地") +
-  labs(x = "经度", y = "纬度", title = "世界草地分布图（低分辨率）") +
-  coord_fixed(ratio = 1.3) +
-  theme_minimal()
+ggplot() +
+  geom_raster(data = melted_mat, aes(x = longitude, y = latitude, alpha = is_grassland), fill = "Green") +
+  scale_alpha_manual(
+    values = c("FALSE" = 0, "TRUE" = 1),
+    name = "是否为草地"
+  ) +
+  geom_sf(data = world, fill = NA, color = "black", size = 0.5) +
+  labs(
+    x = "经度",
+    y = "纬度",
+    title = "世界草地分布图（低分辨率）"
+  ) +
+  scale_x_continuous(
+    breaks = seq(-180, 180, by = 30),
+    labels = function(x) {
+      ifelse(x >= 0, paste0(x, "°E"), paste0(abs(x), "°W"))
+    },
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    breaks = seq(-90, 90, by = 30),
+    labels = function(y) {
+      ifelse(y >= 0, paste0(y, "°N"), paste0(abs(y), "°S"))
+    },
+    expand = c(0, 0)
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",  # 图例位置设置为右侧
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    legend.key.size = unit(0.8, "cm"),
+    panel.grid.major = element_line(color = "gray80", linewidth = 0.3),
+    panel.grid.minor = element_line(color = "gray90", linewidth = 0.1),
+    panel.ontop = TRUE
+  )
 
 # 关闭画图设备
 dev.off()
+
