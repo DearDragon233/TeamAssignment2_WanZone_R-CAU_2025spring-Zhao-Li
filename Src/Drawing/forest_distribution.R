@@ -22,7 +22,7 @@ forest_colors <- c(
 )
 
 # 设置采样间隔，增大采样间隔来降低数据量
-sampling_interval <- 30  # 增大采样间隔，减少样本数量
+sampling_interval <- 10  # 增大采样间隔，减少样本数量
 
 # 采样矩阵
 mat_sampled <- mat[seq(1, nrow(mat), by = sampling_interval),
