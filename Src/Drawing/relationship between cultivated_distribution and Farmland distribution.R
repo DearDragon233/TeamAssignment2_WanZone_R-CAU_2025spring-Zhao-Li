@@ -3,8 +3,8 @@ library(png)
 library(ggplot2)
 
 # 读取图像
-img1 <- readPNG("D:/r course/TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li/Plots/农田面积-纬度图.png")
-img2 <- readPNG("D:/r course/TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li/Plots/农田占陆地比例-纬度图.png")
+img1 <- readPNG("Plots/农田面积-纬度图.png")
+img2 <- readPNG("Plots/农田占陆地比例-纬度图.png")
 
 # 将图像转换为灰度矩阵
 convert_to_gray <- function(img) {
