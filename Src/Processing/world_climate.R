@@ -1,122 +1,142 @@
 library(terra)
-library(dplyr)
 
-# 合并 DEM 的图层 
+
+# -------------------------------
+# 1. 处理降水数据
+# -------------------------------
+# 指定包含TIF文件的目录
+tif_path <- "Data/Resource/2000prec"
+
+# 列出所有 TIF 文件
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+
+# 载入所有 TIF 文件
+r_list <- lapply(tif_files, rast)
+
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(r_list)
+
+# 对每个格点求和
+precip_tif <- app(r_stack, fun = sum, na.rm = TRUE)
+
+
+# -------------------------------
+# 2. 处理最高温度数据
+# -------------------------------
+# 指定包含TIF文件的目录路径
+tif_path <- "Data/Resource/2000tmax"
+
+# 列出目录中所有的 TIF 文件（确保文件后缀为 .tif）
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+
+# 载入所有 TIF 文件
+rast_list <- lapply(tif_files, rast)
+
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(rast_list)
+
+# 计算每个格点的平均值
+temp_max_tif <- app(r_stack, fun = mean, na.rm = TRUE)
+
+# -------------------------------
+# 3. 处理最低温度数据
+# -------------------------------
+# 指定包含TIF文件的目录路径
+tif_path <- "Data/Resource/2000tmin"
+
+# 列出目录中所有的 TIF 文件（确保文件后缀为 .tif）
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+
+# 载入所有 TIF 文件
+rast_list <- lapply(tif_files, rast)
+
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(rast_list)
+
+# 计算每个格点的平均值
+temp_min_tif <- app(r_stack, fun = mean, na.rm = TRUE)
+
+
+# -------------------------------
+# 4. 处理海拔数据
+# -------------------------------
+# 载入所有 TIF 文件
 dem_files <- list.files("Data/Resource/DEM", pattern = "\\.tif$", full.names = TRUE)
+
+# 将所有栅格图层合并成一个栅格堆栈
 dem_tiles <- lapply(dem_files, rast)
-dem_merged <- do.call(mosaic, dem_tiles)  
 
-# 降低分辨率 降分辨率是我们最强大的武器
-dem_lowres <- aggregate(dem_merged, fact = 2, fun = mean)  
-
-# 读取数据
-read_climate_stack <- function(folder, stat = c("mean", "sum")) {
-  files <- list.files(folder, pattern = "\\.tif$", full.names = TRUE)
-  s <- rast(files)
-  result <- if (stat == "mean") mean(s) else sum(s)
-  resample(result, dem_lowres, method = "bilinear")  # 重采样到 DEM 分辨率
-}
-
-# 加载数据
-tmin_2000 <- read_climate_stack("Data/Resource/2000tmin", "mean")
-tmax_2000 <- read_climate_stack("Data/Resource/2000tmax", "mean")
-prec_2000 <- read_climate_stack("Data/Resource/2000prec", "sum")
-
-# 合并为df
-stack <- c(dem_lowres, tmin_2000, tmax_2000, prec_2000)
-names(stack) <- c("elevation", "tmin", "tmax", "precipitation")
+# 合并图像
+elev_tif <- do.call(mosaic, dem_tiles)
 
 
-for (start_row in seq(1, nrows_total, by = chunk_size)) {
-  end_row <- min(start_row + chunk_size - 1, nrows_total)
-  cat("📦 正在处理行", start_row, "到", end_row, "...\n")
+# -------------------------------
+# 5. 导入并处理参考图像
+# -------------------------------
+# 读取参考 TIFF 文件（第一个文件）
+r <- rast("Data/Raw/glc2000_v1_1.tif")
+
+# 手动添加坐标系信息
+crs(r) <- "EPSG:4326"
+
+# 3 倍降采样，减少数据量（使用3倍点采样法，保证不改变面积比例与相对位置）
+ref_rast <- aggregate(r, fact=3, fun = function(x) x[5])
+
+
+# -------------------------------
+# 6. 重采样另外四个图像并转换为矩阵
+# -------------------------------
+# 将另外四个 raster 对象放入一个列表
+other_rasters <- list(precip_tif, temp_max_tif, temp_min_tif, elev_tif)
+
+# 初始化列表存储重采样后的结果
+resampled_list <- vector("list", length(other_rasters))
+
+# 对每个对象依次进行处理
+for (i in seq_along(other_rasters)) {
+  # 当前对象
+  r <- other_rasters[[i]]
   
-  ymin <- yFromRow(stack, end_row)
-  ymax <- yFromRow(stack, start_row)
-  
-  # 重建一个新的 extent
-  orig_ext <- ext(stack)
-  ext_block <- ext(orig_ext[1], orig_ext[2], ymin, ymax)
-  
-  # 裁剪栅格数据
-  stack_block <- crop(stack, ext_block)
-  
-  # 转为 df并精简数值
-  df_block <- as.data.frame(stack_block, xy = TRUE, na.rm = TRUE) %>%
-    mutate(across(elevation:precipitation, ~round(., 1)))
-  
-  result_list[[length(result_list) + 1]] <- df_block
-  gc()  # 清理内存
-}
-
-
-# 合并并保存为RData
-climate_df <- bind_rows(result_list)
-save(climate_df, file = "Data/Processed/climate_2000_final.RData", compress = "xz")
-str(climate_df)      # 查看结构：列名、类型、示例值
-names(climate_df)    # 查看列名
-head(climate_df)     # 查看前几行
-nrow(climate_df)     # 查看行数
-ncol(climate_df)     # 查看列数
-summary(climate_df)  # 简要统计（可看是否有 NA、极值等）
-
-library(terra)
-
-# 读取tif，求mean和sum到矩阵
-process_variable <- function(path, varname, method = c("mean", "sum")) {
-  files <- list.files(path, pattern = "\\.tif$", full.names = TRUE)
-  message("📂 处理变量：", varname, "，共 ", length(files), " 个文件...")
-  
-  r <- rast(files)
-  if (method == "mean") {
-    r_avg <- mean(r)
-  } else {
-    r_avg <- sum(r)
+  # 检查当前 raster 的投影和几何信息（分辨率、范围）的对齐情况
+  if (!compareGeom(r, ref_rast, stopOnError = FALSE)) {
+    # 如果几何信息不一致，则通过 project() 函数转换至参考对象的投影系统
+    r <- project(r, ref_rast)
   }
   
-  mat <- matrix(values(r_avg), nrow = nrow(r_avg), ncol = ncol(r_avg), byrow = TRUE)
-  mat <- round(mat, 1)
+  # 采用重采样的方法使当前对象与参考对象网格对齐
+  # 注意：连续数据推荐使用 "bilinear" 双线性插值；若为分类数据，请改用 "near"
+  r_resampled <- resample(r, ref_rast, method = "bilinear")
   
-  save(mat, file = paste0("Data/Processed/", varname, "_mat.RData"), compress = "xz")
-  message("✅ 已保存：", varname, "_mat.RData")
+  # 裁剪（如果需要）使范围与参考对象一致
+  r_resampled <- crop(r_resampled, ext(ref_rast))
+  
+  # 转换为矩阵，保留图像中的排列格式，注意应按行填充
+  mat <- matrix(r_resampled, nrow = nrow(r_resampled), byrow = T)
+  
+  # 计算每行中心经度、纬度
+  longitudes <- terra::xFromCol(r_resampled, 1:ncol(r_resampled))
+  latitudes <- terra::yFromRow(r_resampled, 1:nrow(r_resampled))
+  
+  # 将经纬度作为矩阵行列名
+  colnames(mat) <- longitudes
+  rownames(mat) <- latitudes
+  
+  # 存入列表
+  resampled_list[[i]] <- mat
 }
 
-# 将函数调用至各个目标的量
-process_variable("Data/Resource/2000tmin",   "tmin",          method = "mean")
-process_variable("Data/Resource/2000tmax",   "tmax",          method = "mean")
-process_variable("Data/Resource/2000prec",   "precipitation", method = "sum")
 
-str(dem_matrix)          # 查看结构（维度、前几项内容）
+# -------------------------------
+# 7. 存储矩阵
+# -------------------------------
+# 将文件名存为向量
+output_names <- c("precipitation_mat.RData",
+                  "tmax_mat.RData",
+                  "tmin_mat.RData",
+                  "elevation_matrix_reduced.RData")
 
-dim(dem_matrix)   # 查看行数和列数
-length(dem_matrix)       # 元素总个数（行×列）
-object.size(dem_matrix)  # 占用内存大小（单位：字节）
-
-summary(as.vector(mat))  # 快速统计最小值、最大值、四分位数
-range(mat, na.rm = TRUE) # 最小/最大值
-mean(mat, na.rm = TRUE)  # 平均值
-
-library(terra)
-
-# 读取并合并
-dem_files <- list.files("Data/Resource/DEM", pattern = "\\.tif$", full.names = TRUE)
-dem_tiles <- lapply(dem_files, rast)
-dem_merged <- do.call(merge, dem_tiles)
-
-# =降采样 每4×4像素合成1个
-factor <- 4
-dem_reduced <- aggregate(dem_merged, fact = factor, fun = mean)
-
-# 转成矩阵
-dem_matrix <- as.matrix(dem_reduced, wide = TRUE)
-
-# 保存为RData
-save(dem_matrix, file = "Data/Processed/elevation_matrix_reduced.RData", compress = "gzip")
-
-str(dem_matrix)          # 查看结构（维度、前几项内容）
-dim(dem_matrix)   # 查看行数和列数
-length(dem_matrix)       # 元素总个数（行×列）
-object.size(dem_matrix)  # 占用内存大小（单位：字节）
-summary(as.vector(dem_matrix))  # 快速统计最小值、最大值、四分位数
-range(mat, na.rm = TRUE) # 最小/最大值
-mean(mat, na.rm = TRUE)  # 平均值
+# 用循环分别存储为.RData
+for (i in seq_along(resampled_list)){
+  mat <- resampled_list[[i]]  # 先赋值到具体变量，保证正常save
+  save(mat, file = paste0("Data/Processed/",output_names[i]))
+}
