@@ -47,7 +47,7 @@ land_fraction_long <- land_fraction_long %>%
 # ggplot，启动！
 ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill = Fraction)) +
   geom_tile() + 
-  scale_fill_viridis_c(limits = c(0, 0.75)) +
+  scale_fill_viridis_c(limits = c(0, 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "植被类型-纬度分布热图",
