@@ -32,12 +32,12 @@ png("Plots/grassland_distribution.png", width = 924, height = 684, res = 150)
 
 # 绘图
 ggplot() +
+  geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
   geom_raster(data = melted_mat, aes(x = longitude, y = latitude, alpha = is_grassland), fill = "Green") +
   scale_alpha_manual(
     values = c("FALSE" = 0, "TRUE" = 1),
     name = "是否为草地"
   ) +
-  geom_sf(data = world, fill = NA, color = "black", size = 0.5) +
   labs(
     x = "经度",
     y = "纬度",

@@ -1,0 +1,788 @@
+# R程序设计Homework3
+## 小组介绍（Team Introduction）
+### 小组名称（Team Name）：未院大弯区（WanZone）
+### 成员（Members）
+ - 彭宇程（组长）赵家珩（展示人）赵昱郡（展示人）
+### 分工（Division of Labor）
+#### 核心分工
+ - **代码编写（Coding）**：赵家珩、彭宇程、赵昱郡
+ - **思路确定（Thoughts and Ideas）**：赵家珩、赵昱郡、彭宇程
+ - **成果展示（Demonstration）**：赵昱郡、赵家珩
+#### 其他分工
+ - **Github管理（Github Management）**：赵家珩、彭宇程、赵昱郡
+ - **Jupyter Notebook撰写（Jupyter Notebook）**：彭宇程
+ - **资料收集（Data Getting）**：赵昱郡、赵家珩、彭宇程
+
+# 项目信息（Project Information）
+<center><b>本篇Jupyter Notebook将由markdown语法展现，具体展示将由.md转化得到的.pdf完成
+<center><b>为保证篇幅，后续代码展示将只展示关键部分
+
+<center> <b>字数：6196（中文字符）
+<center> <b>查重率：8.24%（PaperFree）
+
+**项目时间：21天** **Github项目仓库使用时间：14天** **Github工作记录（History）：89条（统计截止于3.15 20:45）**
+**Github项目URL：https://github.com/DearDragon233/TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li**
+**Github项目截图：**
+<div align=center><img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\Github项目截图.png" width="70%">
+
+# 目录（Catalogue）
+- 1. **摘要（Abstract）**
+- 2. **背景与课题选取（Background and Topic Selection）**
+- 3. **核心数据处理（Core Data Process）**
+- 4. **数据可视化与结论（Data Visualization and Conclusion）**
+- 5. **参考（References）**
+
+# 一、摘要（Abstract）
+感谢您阅读本篇Jupyter Notebook。本项目为中国农业大学2025春季《R程序设计》课程（授课教授：李钊）中小组（未院大弯区，WanZone）的第三次作业。
+
+我们的核心课题是：基于2000年不完全环境组分数据（主要为地形、气温、湿度、海拔）的农田转化潜力预测模型，其旨在通过某地理坐标下的环境组分参数预测该地区向农田地形转化的可能性（转化为农田地形的潜能）。
+
+以下为我们的总文件过程流程图：
+<div align=center><img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\flow\总程序示意图.drawio.png">
+
+除核心课题之外，我们还进行了以下课题的探究：
+1. **植被类型在纬度轴上的分布及所占陆地比例可视化（热图、密度图）**
+2. **源数据的地理统计分析及可视化（熵、最大类型比例、有效地形种类数、Gini系数，雷达图）**；
+3. **植被与分类面积占比可视化（调色盘）**
+4. **草地（grassland）、森林（forest）、农田（cultivated land）分布可视化（世界地图）**；
+5. **不同纬度下地形分布的周期共振可视化（李萨如图，大物课程新学的图像，偏趣味）**；
+6. **标准化种内（地形值内）和种间（不同地形值间）共现偏差探究（柱状图、热力图）**。
+
+我们遇到的主要挑战包括：
+1. 源数据量庞大，程序运行时负荷高（Main）；
+2. 数据结构复杂，变量繁多，提取困难；
+3. 地形类型繁多，绘图结果辨识度低；
+4. 额外数据的获取方式复杂；
+5. 从可视化结果中提炼科研结论的经验不足。
+
+我们的主要解决思路包括：
+1. 降倍处理原始数据；
+2. 寻找适合运行的数据结构，如稀疏矩阵等；
+3. 拼接与储存关键数据，如分块绘图等；
+4. 降低图像文件大小，如降低分辨率等；
+5. 合理分工，设定工程日程；
+6. 通过Github进行及时同步。
+
+得到的绘图和结论请见第四部分，为减少文本阅读量，我们在摘要部分不作描述。
+
+# 二、课题选取（Topic Selection）
+立于2025年的彼端看向数据所提供的遥远的2000年，我们已经知晓了短短几十年间，诸多气候、生态问题的爆发，例如全球变暖、海平面上升、冰川融化、臭氧层空洞扩大、物种数量减少等严重环境和生态问题。
+
+确定到具体问题，我们了解到，对于我国耕地面积：1996年至2008年，年均净减少超过1000万亩；2009年至2019年，年均净减少超过1100万亩（中华人民共和国农业农村部，2022）；人均耕地面积是衡量全球耕地资源安全状况的重要指标，近60a来，全球人口增长速度过快，远超过耕地增长速度，人均耕地面积呈现减少的趋势（马永欢，2025）。
+
+虽然耕地面积减少能够由农业生产力发展或其他有利因素（如耕地质量提高、生态改善工程等）导致，我们仍认为世界范围内的农田（Cropland&Cultivated land）变化趋势具有强的警示作用，具有一定研究价值。
+
+结合以上背景，我们认为，**地形（Terrain）**，作为定义不同地理空间的显著标识，在生态学、地理学等学科中发挥着关键概念和参数集合的重要作用。而耕地（后称农田）地形的发展对人类社会的影响或许在所有地形中排名前列，并直接影响着粮食安全、人类健康等重要问题，因此，我们将主要课题确定为：基于2000年不完全环境组分数据（主要为地形、气温、湿度、海拔）的农田转化潜力预测模型。
+
+通过学习，我们了解到地形能够直观展示多项地理因子水平，也能反映如物种多样性等生态学概念在其上的表现。因此，我们希望通过设计预测模型，在某一确定时间（本课题使用2000年数据）上对不同地理坐标下的地形进行预测。
+
+对于我们的主要课题，我们所预期的效果是，能够通过输入确定坐标下的环境因子参数，得到该坐标向农田发展的**潜力（Potential）**，并在对未来确定时间点的农田分布进行分析和可视化处理。
+
+通过讨论，我们决定在课程PPT中“Topic课题示例Topic4”的数据基础上，结合额外数据，进行我们的课题研究。以下为确定Topic后的数据选取流程图。
+<div align=center> <img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\flow\分析流程.drawio (1).png" width="45%">
+
+由此，我们为核心课题中的关键词：Cropland&Cultivated land进行了定义捕捉和延伸，详细定义请见：**农业区划分.docx（整理：赵昱郡）**。
+
+在与李老师的沟通中，我们了解到这个课题对于我们的技术局限性，但我们仍希望进行浅略的探索，因此，我们决定不对控制农田形成的调控因子进行严谨的筛选，并主要通过温度（Temperature）、降水（Precipitation）、地形值（Terrain Value）等因子作为建模数据。
+
+# 三、核心数据处理（Core Data Process）
+我们主要处理了以Topic4为核心（包含Topic1、2、3）的源数据，并根据建模需要检索了部分网络公开数据。
+
+以下为我们的程序关系示意图：
+<div align=center><img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\flow\文件关系.drawio.png" width="70%">
+
+我们的核心数据处理程序如下：
+1. TIF_2DMatrix.R；我们在对源数据的初步处理中，在发现了源数据大小对数据处理产生较大困难后，我们采取了降倍采样的处理措施，降倍三倍采样，取[5]位数值代替了，三倍采样为使采样点在中心，能代表改位置，选择点采样方法是因为可以最大限度保留原始的植被类型面积比例，并实现了对源数据大小的缩小。
+
+
+```
+library(reshape2)
+library(terra) 
+
+# 2 倍降采样，减少数据量（使用3倍点采样法，保证不改变面积比例与相对位置）
+r_lowres <- aggregate(r, fact=3, fun = function(x) x[5])
+
+# 默认输出是小数，进行取整
+r_lowres <- round(r_lowres)
+```
+
+2. Pixel_area_Latitude.R；在对源数据初步处理后，为了进一步缩小存储体积，我们将新的核心数据转换为只存储在第一列的.RData。
+
+
+```
+# 提升存储效率，只存第一列（一维向量）
+area_vector <- unlist(pixel_area[,1],use.names = F)
+```
+
+3. Color_conversion.R；该程序旨在将源文件中的Global_Legend中的信息转化为函数中可以直接使用的十六进制的颜色信息。
+
+
+```
+# 将图例RGB信息转换为16进制颜色代码
+plant_colors <- rgb(leg[[3]], leg[[4]], leg[[5]]) # 3,4,5 列对应 R,G,B值
+names(plant_colors) <- leg$CLASSNAMES             # 将颜色名称映射到植被类别
+
+# 保存为.RData文件
+save(plant_colors, file = "Data/Processed/plant_colors.RData")  # 图例颜色
+```
+
+4. Vegetation_area~Latitude.R；这个程序旨在为后续的地形（植被类型）在纬度上的面积变化和地形（植被类型）占陆地的比例可视化提供存储着相关信息的.RData
+
+
+```
+# 加载R包
+library(readxl)
+library(reshape2) # 用于转换为长格式
+library(ggplot2)  # 伟大，无需多言（
+library(scales)   # 用于颜色转换
+library(dplyr)    #用于区间分类
+
+# 计算每种植被在各纬度所占像素数
+row_counts <- apply(mat, 1, function(x) table(factor(x, levels = 1:23)))
+
+# 每行乘以面积向量的对应元素算出面积
+for(rows in 1:nrow(row_counts))
+    lat_area[rows,] <- row_counts[rows,] * area_vector[rows]
+
+# 计算各纬度总面积，用于统计
+lat_area <- cbind(lat_area,area_vector * ncol(mat))
+colnames(lat_area)[24] <- "Gross areas"
+
+# 计算各纬度总陆地面积（总面积-海洋面积）
+lat_area <- cbind(lat_area,lat_area[,24]-lat_area[,20])
+colnames(lat_area)[25] <- "Land areas"
+
+# 计算占比
+land_fraction <- lat_area[,c(1:19,21:23)] / lat_area[,25]
+```
+
+5. world_climate.R；于本程序中，我们主要对预测模型所需的多维数据进行处理，统一分辨率和进行整合
+
+
+```
+library(terra)
+
+# -------------------------------
+# 1. 处理降水数据
+# -------------------------------
+# 指定包含TIF文件的目录
+tif_path <- "Data/Resource/2000prec"
+# 列出所有 TIF 文件
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+# 载入所有 TIF 文件
+r_list <- lapply(tif_files, rast)
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(r_list)
+# 对每个格点求和
+precip_tif <- app(r_stack, fun = sum, na.rm = TRUE)
+# -------------------------------
+# 2. 处理最高温度数据
+# -------------------------------
+# 指定包含TIF文件的目录路径
+tif_path <- "Data/Resource/2000tmax"
+
+# 列出目录中所有的 TIF 文件（确保文件后缀为 .tif）
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+# 载入所有 TIF 文件
+rast_list <- lapply(tif_files, rast)
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(rast_list)
+# 计算每个格点的平均值
+temp_max_tif <- app(r_stack, fun = mean, na.rm = TRUE)
+# -------------------------------
+# 3. 处理最低温度数据
+# -------------------------------
+# 指定包含TIF文件的目录路径
+tif_path <- "Data/Resource/2000tmin"
+# 列出目录中所有的 TIF 文件（确保文件后缀为 .tif）
+tif_files <- list.files(path = tif_path, pattern = "\\.tif$", full.names = TRUE)
+# 载入所有 TIF 文件
+rast_list <- lapply(tif_files, rast)
+# 将所有栅格图层合并成一个栅格堆栈
+r_stack <- rast(rast_list)
+# 计算每个格点的平均值
+temp_min_tif <- app(r_stack, fun = mean, na.rm = TRUE)
+# -------------------------------
+# 4. 处理海拔数据
+# -------------------------------
+# 载入所有 TIF 文件
+dem_files <- list.files("Data/Resource/DEM", pattern = "\\.tif$", full.names = TRUE)
+# 将所有栅格图层合并成一个栅格堆栈
+dem_tiles <- lapply(dem_files, rast)
+# 合并图像
+elev_tif <- do.call(mosaic, dem_tiles)
+# -------------------------------
+# 5. 导入并处理参考图像
+# -------------------------------
+# 读取参考 TIFF 文件（第一个文件）
+r <- rast("Data/Raw/glc2000_v1_1.tif")
+# 手动添加坐标系信息
+crs(r) <- "EPSG:4326"
+# 3 倍降采样，减少数据量（使用3倍点采样法，保证不改变面积比例与相对位置）
+ref_rast <- aggregate(r, fact=3, fun = function(x) x[5])
+# -------------------------------
+# 6. 重采样另外四个图像并转换为矩阵
+# -------------------------------
+# 将另外四个 raster 对象放入一个列表
+other_rasters <- list(precip_tif, temp_max_tif, temp_min_tif, elev_tif)
+# 初始化列表存储重采样后的结果
+resampled_list <- vector("list", length(other_rasters))
+# 对每个对象依次进行处理
+for (i in seq_along(other_rasters)) {
+  # 当前对象
+  r <- other_rasters[[i]]
+  # 检查当前 raster 的投影和几何信息（分辨率、范围）的对齐情况
+  if (!compareGeom(r, ref_rast, stopOnError = FALSE)) {
+    # 如果几何信息不一致，则通过 project() 函数转换至参考对象的投影系统
+    r <- project(r, ref_rast)
+  }
+  # 采用重采样的方法使当前对象与参考对象网格对齐
+  # 注意：连续数据推荐使用 "bilinear" 双线性插值；若为分类数据，请改用 "near"
+  r_resampled <- resample(r, ref_rast, method = "bilinear")
+  # 裁剪（如果需要）使范围与参考对象一致
+  r_resampled <- crop(r_resampled, ext(ref_rast))
+  # 转换为矩阵，保留图像中的排列格式，注意应按行填充
+  mat <- matrix(r_resampled, nrow = nrow(r_resampled), byrow = T)
+  # 计算每行中心经度、纬度
+  longitudes <- terra::xFromCol(r_resampled, 1:ncol(r_resampled))
+  latitudes <- terra::yFromRow(r_resampled, 1:nrow(r_resampled))
+  # 将经纬度作为矩阵行列名
+  colnames(mat) <- longitudes
+  rownames(mat) <- latitudes
+  # 存入列表
+  resampled_list[[i]] <- mat
+}
+# -------------------------------
+# 7. 存储矩阵
+# -------------------------------
+# 将文件名存为向量
+output_names <- c("precipitation_mat.RData",
+                  "tmax_mat.RData",
+                  "tmin_mat.RData",
+                  "elevation_matrix_reduced.RData")
+# 用循环分别存储为.RData
+for (i in seq_along(resampled_list)){
+  mat <- resampled_list[[i]]  # 先赋值到具体变量，保证正常save
+  save(mat, file = paste0("Data/Processed/",output_names[i]))
+}
+```
+
+我们使用的网络开源数据如下：
+1. WorldClim——Prec/Tmin/Tmax（2000）；
+2. Globalmaps(Github)——DEM。
+
+以下是我们挑选以上数据的思考流程流程图：
+<div align=center> <img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\flow\DEM数据收集.drawio (2).png" width="65%">
+
+我们对数据进行的轻量化操作如下：
+1. 样本降倍处理；
+2. 稀疏矩阵；
+3. 降低分辨率；
+4. 数据分块；
+
+# 四、数据可视化与结论（Data Visualization and Conclusion and Conclusion）
+在完成预处理后，我们围绕不同地形类型展开了可视化分析，绘制了各变量（气温、湿度、地形因子等）在地理空间中的分布图像，并通过热力图、散点图、分类树等形式对其可分性进行判断与直观展示。
+
+以下我们将以部分提及的课题为索引进行代码及图像展示，并将所得结论附于图像之后。
+1. **各植被类型和农田在纬度轴上的分布及所占陆地比例可视化（热图、密度图）**
+
+
+```
+# 加载R包
+library(reshape2) # 用于转换为长格式
+library(ggplot2)  # 伟大，无需多言（
+
+# ggplot，启动！
+ggplot(land_fraction_long, aes(x = Latitude, y = Fraction, fill = Vegetation)) +
+  geom_density(stat = "identity", position = "stack",color = NA) +  # 颜色NA为无边框，stack为堆叠图
+  scale_fill_manual(values = plant_colors) +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0)) +  # 移除 x 轴额外留白
+  labs(title = "植被类型占陆地比例-纬度密度图",
+       x = "纬度/°",
+       y = "植被类型占陆地比例",
+       fill = "植被类型")+
+  theme(legend.position = "none")+  # 移除图例，便于拼接
+  coord_flip()                      # 旋转图像匹配地图方向
+```
+
+<center class ='img'>
+<img title="植被类型占陆地比例-纬度密度图" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\植被类型占陆地比例-纬度密度图.png" width="35%">
+<img title="植被分类占陆地比例-纬度密度图" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\植被分类占陆地比例-纬度密度图.png" width="45%">
+</center>
+我们在首次绘图后向李老师寻求了意见，进行了修改与提升，以上为修改前图片，以下为修改后图片
+
+<center class ='img'>
+<img title="农田面积-纬度图" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\农田面积-纬度图.png" width="45%">
+<img title="农田占陆地比例-纬度图" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\农田占陆地比例-纬度图.png" width="45%">
+</center>
+对于修改前图像，我们旨在得到各个植被类型（地形）在纬度轴上于陆地占比的可视化结果，经修改，我们着重统计了农田占陆地比例（及农田面积）在纬度上的趋势，并由图像得到了以下结论：
+    - 农田面积的分布与纬度并不存在线性关系；
+    - 北纬13°、北纬45°左右，农田面积及其陆地占比达到**相对峰值**，南纬30°的农田陆地占比达到**相对峰值**，但是南纬30°的农田面积并**未处于明显峰值**，由此我们得到纬度上的陆地面积分布存在**较大差异**的结论，这一结论亦**削弱**了纬度与农田分布的**关联性**，凸显了纬度的南北与农田分布的关联性。据搜集资料显示，南纬30度仍然是一个特殊的地方。这里有南半球最高峰阿空加瓜世界最大的岩石艾尔斯巨岩，大洋洲最低点北艾尔湖，以及神秘岛屿“复活节”岛；
+
+以下为植被类型在纬度尺度上的分布热图：
+
+
+```
+# 加载R包
+library(reshape2) # 用于转换为长格式
+library(ggplot2)  # 伟大，无需多言（
+library(dplyr)    # 用于区间分类
+
+# ggplot，启动！
+ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill = Fraction)) +
+  geom_tile() + 
+  scale_fill_viridis_c(limits = c(0, 0.75)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "植被类型-纬度分布热图",
+       x = "纬度区间",
+       y = "植被类型",
+       fill = "植被占比")+
+  coord_flip()
+```
+
+<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\植被类型-纬度分布热图.png">
+由此图我们可以得出结论：
+    - 阔叶常绿型植被在赤道地区占据优势地位；
+    - 稀疏灌木和草本植被类型在北纬高纬度、南纬中高纬地区分布较广，于南纬47°左右占据优势地位，落叶、草本这两种植被类型于稀疏灌木和草本植被类型**分布关联性较强**；
+    - 针叶常绿和针叶落叶型植被主要在北纬较高纬度地区；
+    - 耕种和管理区域在北纬10°至60°间**分布水平较广**，在南纬30°及上下浮动15°左右区间分布较广；
+    - 在北纬15°至35°间裸地占比明显；
+    - 雪和冰地形在北纬75°至85°间分布占比高。
+
+以下附两张绘图，一张为源数据像素面积在世界尺度上的大小可视化，一张为各地形值频率柱状图，这两张绘图可对以上结论进行佐证，我们可以由像素面积亮色区域观察到纬度范围上的中间区域像素面积较高的结论，可以由各地形值频率柱状图观察到各地形数据分布样本量的大小。
+
+
+```
+library(terra) 
+
+# 添加坐标系信息
+crs(tif_file) <- "EPSG:4326"
+# 经纬度范围
+ext(tif_file) <- ext(-180.000000, 179.991070, -56.008928, 89.991071)
+# 降倍采样
+tif_file <- aggregate(tif_file, fact=2)
+# 返回每个像素的面积
+pixel_area <- cellSize(tif_file)
+# 可视化
+png("Plots/pixel_area_map.png", width=2000, height=1500, res=300)
+plot(pixel_area/1e6,main="像素面积分布图(km²)",
+     xlab="经度/°", ylab="纬度/°")
+
+library(ggplot2)
+library(readxl)
+library(cowplot)
+
+# 绘制主要柱状图
+main_plot <- ggplot(df_freq, aes(x = as.factor(terrain), y = frequency, fill = as.factor(terrain))) +
+  geom_col() +
+  scale_fill_manual(values = df_freq$color, guide = "none") +
+  labs(x = "地形值", y = "频率", title = "地形值频率柱状图") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+<center class ='img'>
+<img title="像素面积在世界尺度上的大小" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\pixel_area_map.png" width="45%">
+<img title="地形值频率柱状图" src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\地形值频率柱状图.png" width="45%">
+</center>
+2. **源数据的地理统计分析及可视化（熵、最大类型比例、有效地形种类数、Gini系数——雷达图）**
+
+
+```
+library(terra)
+library(gglot2)
+library(fmsb)
+
+# 计算熵
+entropy <- -sum(terrain_prob * log2(terrain_prob))
+# 计算最大类别占比
+dominance_ratio <- max(terrain_prob)
+# 计算有效类别数
+effective_classes <- 2^entropy
+
+# 计算 Gini 系数
+gini_index <- function(p) {
+  n <- length(p)
+  sum_i <- sum(outer(p, p, function(x, y) abs(x - y)))
+  sum_i / (2 * n)
+}
+gini <- gini_index(as.numeric(terrain_prob))
+
+#绘图
+radarchart(quality_metrics,
+           axistype = 1,
+           pcol = "darkorange", pfcol = rgb(1, 0.5, 0.2, 0.3),
+           plwd = 2,
+           cglcol = "grey80", cglty = 1,
+           axislabcol = "grey40", vlcex = 0.9,
+           title = "地形质量指标雷达图")
+```
+
+<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\数据质量雷达图.png">
+由本图我们得到以下结论：
+    - 熵：源数据信息多样性较高；
+    - 最大类型比例：存在某种“优势”地形，占据着总地形面积的**70%左右**；
+    - 有效地形种类数：为熵的指数形式，可以得出源数据中的“等效数据”较少，**多样性较高**，促进了结论1）的结论；
+    - Gini系数（均衡度）：该系数为衡量类别分布不平衡性的指标，由图像可以得出，图像所含信息较为不均衡，也加深结论1）正确性。
+
+3. **植被与分类面积占比可视化（调色盘/饼状图）**
+
+
+```
+# 加载R包
+library(ggplot2)  # 伟大，无需多言（
+library(dplyr)    # 数据处理
+
+# 内圈：按分类汇总，计算累计面积用于确定标签位置
+category_data <- df %>%
+  group_by(category) %>%
+  summarise(area = sum(area), .groups = "drop") %>%
+  mutate(
+    pct = area / sum(area) * 100,
+    midpoint = sum(area) - cumsum(area) + area / 2
+  )
+
+# 外圈：保留原数据，计算每个变量在外圈的累计面积及比例
+df <- df %>%
+  mutate(
+    category_area = ave(area, category, FUN = sum),
+    pct = area / category_area * 100
+  )
+
+# 外圈：计算的标签位置
+total_area <- sum(df$area)
+df <- df %>%
+  arrange(variable) %>%  # 保证顺序与因子水平一致
+  mutate(
+    outer_cumsum = cumsum(area),
+    outer_midpoint = sum(area) - outer_cumsum + area / 2,
+    raw_angle = 360 * outer_midpoint / total_area - 90, # 如果角度小于 -90 度，则旋转180度，使文字正向
+    hjust = ifelse(raw_angle > 90, 1, 0),
+    angle = ifelse(raw_angle > 90, 180- raw_angle, -raw_angle)
+  )
+
+
+# 创建双层饼图
+ggplot() +
+  # 内圈饼图（分类）
+  geom_bar(data = category_data, 
+           aes(x = 0, y = area, fill = category), 
+           stat = "identity", width = 1) +
+  # 内圈标签，在饼图内
+  geom_text(data = category_data, 
+            aes(x = c(0.05,0.05,0.05,0.05,0.05,0.15,0.3), y = midpoint, label = category), 
+            size = 4, color = "white") +
+  # 外圈饼图（原数据）
+  geom_bar(data = df, 
+           aes(x = 1, y = area, fill = variable), 
+           stat = "identity", width = 0.6) +
+  # 外圈标签，在圈外侧
+  geom_text(data = df,
+            aes(x = 1.35, y = outer_midpoint, 
+                label = variable, angle = angle, hjust = hjust),
+            size = 3) +
+  # 转换极坐标为饼图
+  coord_polar(theta = "y") +
+  # 保证颜色按照设定映射
+  scale_fill_manual(
+    breaks = c(levels(df$category), levels(df$variable)),
+    values = c("Forest" = "#006300",
+               "Shrub" = "#FF7600",
+               "Grass" = "#009595",
+               "Cultivated" = "#FF73E7",
+               "Noplant" = "#B3B3B3",
+               "Artificial" = "#FF0000",
+               "Nodata" = "#FFFFFF",
+               plant_colors)
+  ) +
+  # 隐藏图例并修改主题
+  labs(title = "植被与分类面积占比图")+
+  theme_void() +
+  theme(legend.position = "none") +
+  labs(fill = "Legend") +
+  coord_polar(theta = "y", clip = "off")  # 防止标题位置裁剪
+```
+
+<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\植被与分类面积占比图.png">
+以目的图像为导向，我们对源数据中提及的23个地形进行了大类分类，分为：Forest、Grass、Shrub、Cultivated、Nodata&Artificial、Noplant五种大类。由图我们可以得到以下结论：
+    - 森林与草地区域在全球的面积占比居于**相对优势地位**
+    - 农田区域分布占比**次于**森林与草地，与无植物地形相当，且**明显**多于人类改造区（Artificial）；
+    - 灌木区域在所有植物类区域中处于占比相对最少地位；
+
+4. **草地（grassland）、森林（forest）、农田（cultivated land）分布可视化（世界地图）**
+
+
+```
+# 由于实现过程类似，以下代码以农田为例
+# 加载R包
+library(ggplot2)
+library(reshape2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# 获取大陆轮廓数据
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# 绘图
+ggplot() +
+  geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
+  geom_raster(data = melted_mat, aes(x = longitude, y = latitude, alpha = is_cultivated), fill = "#F4A300") +
+  scale_alpha_manual(values = c("FALSE" = 0, "TRUE" = 1), name = "是否为农田") +
+  labs(x = "经度", y = "纬度", title = "世界农田分布图（低分辨率）") +
+  scale_x_continuous(
+    breaks = seq(-180, 180, by = 30),  # 设置横坐标刻度间隔为30度
+    labels = function(x) {
+      ifelse(x >= 0, paste0(x, "°E"), paste0(abs(x), "°W"))
+    }
+  ) +
+  scale_y_continuous(
+    breaks = seq(-90, 90, by = 30),  # 设置纵坐标刻度间隔为30度
+    labels = function(y) {
+      ifelse(y >= 0, paste0(y, "°N"), paste0(abs(y), "°S"))
+    }
+  ) +
+  coord_sf() +
+  theme_minimal()
+```
+
+森林：<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\forest_distribution.png">
+
+草地：<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\grassland_distribution.png">
+
+农田：<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\cultivated_distribution.png">
+
+在本图像的处理中，为使图例缩小，我们对各地形名称进行了首字母缩写处理，我们由此组图像得出结论如下：
+    - 森林区域在亚洲东南部、亚洲北部、非洲中南部、欧洲南部、北美洲东部、北美洲北部、南美洲中部分、大洋洲全部存在明显分布；
+    - 草地区域在亚洲东部、北部、大洋洲、非洲东部、南部、北美洲北部、南美洲南部存在明显分布；
+    - 农田区域在亚洲南部、亚洲东部、亚洲东南部、亚洲北部、欧洲、非洲中部、东部、北美洲中部、南美洲东部、大洋洲南部存在明显分布。
+
+5. **不同纬度下地形分布的周期共振可视化（李萨如图，大物课程新学的图像，偏趣味）**
+
+
+```
+library('ggplot2')
+library('minpack.lm')
+library('signal')
+
+# 利用傅里叶变换进行简谐近似
+fft_smooth <- function(data, keep=5) {
+  fft_result <- fft(data)
+  fft_result[(keep+1):(length(data)-keep)] <- 0
+  Re(fft(fft_result, inverse = TRUE) / length(data))
+}
+
+x_smooth <- fft_smooth(x_data, keep = 5)
+y_smooth <- fft_smooth(y_data, keep = 5)
+# 绘图
+ggplot(df, aes(x, y)) +
+  geom_path(color = "blue", size = 1) +
+  theme_minimal() +
+  labs(title = "李萨如图（经度方向的简谐近似）", x = "纬度索引 1", y = "纬度索引 2") +
+  coord_fixed()
+```
+
+李萨如图是将两个简谐振动分别作为x和y的坐标所绘出的轨迹，在我们的绘图中，x轴为某一纬度线上的地形值在经度方向的简谐拟合结果，y轴为另一条纬度线上的相同处理。
+
+我们将源数据的地形值在经度尺度上的分布进行了**简谐拟合**，这样，我们可以理解为，这个图像是对某两个指定纬度上的地形值进行空间协同性分析，通俗来讲，就是观察这两个“简谐振动”的合运动，观察这种运动的图形是否有着形状上的规律或其他图形性质，在物理学上讲，也就是通过图像得到这两个运动的**相位差**，从而判断这两个运动的**共振程度**。
+
+推广到生态学或生态地理学上，我们认为这种图像可以从一定程度上揭示两个维度上是否存在着**相似的地质历史或气候机制**，我们或许会得到某些纬度之间的无规律的李萨如图，也可能得到规整的，从中我们或许可以窥探到某两个维度是否拥有着**类似的生态区域**，也许能由此够评估将这一“近似”的思路使用在地形值上的可行性。由于我们无法对此方法在地形值相似程度上的可行性进行严谨验证，所以所得结论都具有**猜测性质**。
+
+以下是绘图结果：
+<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\Lissajous_Figure1.0.png">
+得到结论如下：
+    - 在北纬9°至13.5°与15°至19°的图像较为贴近，且为左下 - 右上型，说明两个简谐运动的相位差与0相近，或许能够得到着两个区间的**地形（植被类型）相似度较高**的结论；
+    - 同理，位于狭窄椭圆区域右侧的区域呈现**面积较大**的特征，或许说明了15°至19°与19°至20°两个区间内的**地形差异较大**；
+    - 图像在19.5°与20°的对应点处产生了交叉，通过网络李萨如图不同特征传达的信息介绍，这种交叉特征或许由频率不同或存在某种特殊的相位差造成，我们尚未从中得到有价值的可能结论。
+
+我们通过数据分析与可视化发现，不同地形在多元因子空间中具有相对清晰的可分性，验证了我们最初的假设：基于多元环境因子，可以在一定程度上实现地形类型的预测。
+
+6. **标准化种内（地形值内）和种间（不同地形值间）共现偏差探究（柱状图、热力图）**
+
+
+```
+# 加载R包
+library(readxl)
+library(reshape2)   # 用于转换为长格式
+library(ggplot2)    # 伟大，无需多言（
+library(gridExtra)  # 用于拼接图像
+
+# -------------------------------
+# 1. 数据准备与参数设定
+# -------------------------------
+# 加载数据
+load("Data/Processed/TIF_2DMatrix.RData")         # 植被分布，对象为mat
+
+# 定义植被种类总数与所需数据
+n_types <- 23
+nrow_mat <- nrow(mat)
+ncol_mat <- ncol(mat)
+
+# -------------------------------
+# 2. 利用向量化方法构造共现矩阵（八邻域）
+# -------------------------------
+# 初始化共现矩阵：行为中心植被类型，列为邻域中实际出现的植被类型
+co_occurrence <- matrix(0, nrow = n_types, ncol = n_types)
+
+# 构造 8 个邻域偏移量（3x3 范围，除去中心）
+offsets <- expand.grid(dr = -1:1, dc = -1:1)
+offsets <- offsets[!(offsets$dr == 0 & offsets$dc == 0), ]
+
+# 对每个偏移量一次性处理整个有效区域，提高效率
+for(idx in 1:nrow(offsets)){
+  dr <- offsets$dr[idx]
+  dc <- offsets$dc[idx]
+  
+  # 确定当前偏移下的中心区域索引（确保移位后不越界）
+  i_from <- max(1, 1 - dr)
+  i_to   <- min(nrow_mat, nrow_mat - dr)
+  j_from <- max(1, 1 - dc)
+  j_to   <- min(ncol_mat, ncol_mat - dc)
+  
+  # 取出中心区域及对应的邻域区域
+  central_block <- mat[i_from:i_to, j_from:j_to]
+  neighbor_block <- mat[(i_from + dr):(i_to + dr), (j_from + dc):(j_to + dc)]
+  
+  # 转换为向量，统计二者配对次数
+  central_vec <- as.vector(central_block)
+  neighbor_vec <- as.vector(neighbor_block)
+  counts <- table(factor(central_vec, levels = 1:n_types),
+                  factor(neighbor_vec, levels = 1:n_types))
+  
+  # 累加当前偏移所贡献的计数
+  co_occurrence <- co_occurrence + as.matrix(counts)
+}
+
+# -------------------------------
+# 3. 计算邻域概率矩阵
+# -------------------------------
+# 对每行归一化，得到每个中心植被的邻域概率
+prob_matrix <- matrix(0, nrow = n_types, ncol = n_types)
+for(i in 1:n_types){
+  total_neighbors <- sum(co_occurrence[i, ])
+  if(total_neighbors > 0){
+    prob_matrix[i, ] <- co_occurrence[i, ] / total_neighbors
+  }
+}
+# 完全随机分布时，各类型概率应为 1/n_types，作为基准
+expected_value <- 1 / n_types
+
+# -------------------------------
+# 4. 计算偏差矩阵（实际概率减去期望值）
+# -------------------------------
+deviation_matrix <- prob_matrix - expected_value
+
+# -------------------------------
+# 5. 分离成对角线与非对角线两部分，并分别归一化
+# -------------------------------
+# 写入植被类型的对应简化翻译，用于作图
+translations <- c(
+  "阔叶常绿",
+  "阔叶落叶，封闭",
+  "阔叶落叶，开放",
+  "针叶常绿",
+  "针叶落叶",
+  "混合叶",
+  "定期淹没，淡水",
+  "定期淹没，咸水",
+  "未知或其它",
+  "烧毁",
+  "常绿",
+  "落叶",
+  "草本",
+  "稀疏灌木或草本",
+  "定期淹没灌木/草本",
+  "耕种和管理区域",
+  "农田：树木或其它",
+  "农田：灌木或草本",
+  "裸地",
+  "水域",
+  "雪和冰",
+  "人造及相关",
+  "无数据"
+)
+
+# 对角线部分：种内共现偏差
+diag_values <- diag(deviation_matrix)
+# 单独归一化对角线，使得最大绝对值等于1
+diag_max <- max(abs(diag_values))
+norm_diag_values <- diag_values / diag_max
+
+# 构造数据框用于柱状图
+diag_df <- data.frame(Vegetation = translations,
+                      Normalized_Deviation = norm_diag_values)
+
+# 手动因子化植被名，保证作图时顺序不变
+diag_df$Vegetation <- factor(diag_df$Vegetation, levels = unique(diag_df$Vegetation))
+
+# 非对角线部分：种间共现偏差
+off_diag_matrix <- deviation_matrix
+diag(off_diag_matrix) <- NA  # 去掉对角线
+off_diag_max <- max(abs(off_diag_matrix), na.rm = TRUE)
+norm_off_diag_matrix <- off_diag_matrix / off_diag_max
+
+# 写入翻译
+colnames(norm_off_diag_matrix) <- translations
+rownames(norm_off_diag_matrix) <- translations
+
+# 转换为长格式数据，仅保留非NA（非对角线）数据
+if(!require(reshape2)) install.packages("reshape2", dependencies = TRUE)
+library(reshape2)
+melted_off_diag <- melt(norm_off_diag_matrix, varnames = c("Center_Type", "Neighbor_Type"),
+                        na.rm = TRUE)
+colnames(melted_off_diag) <- c("Center_Type", "Neighbor_Type", "Normalized_Deviation")
+
+# -------------------------------
+# 6. 分别作图：先单独作图，再联合显示
+# -------------------------------
+# 绘制对角线部分（种内共现）的柱状图
+p_diag <- ggplot(diag_df, aes(x = Vegetation, y = Normalized_Deviation, fill = Normalized_Deviation)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-1, 1)) +
+  labs(title = "标准化种内共现偏差（归一化后）",
+       x = "植被类型", y = "归一化偏差") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12)) +
+  guides(fill=FALSE) +
+  theme(axis.text.x = element_text(angle = 90)) # 旋转标签防止重叠
+
+# 绘制非对角线部分（种间共现）的热图
+p_off <- ggplot(melted_off_diag, aes(x = factor(Neighbor_Type), y = factor(Center_Type),
+                                     fill = Normalized_Deviation)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       limits = c(-1, 1)) +
+  labs(title = "标准化种间共现偏差（归一化后）",
+       x = "邻域植被类型", y = "中心植被类型",
+       fill = "归一化偏差") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12)) +
+  theme(axis.text.x = element_text(angle = 90)) # 旋转标签防止重叠
+
+# 拼接图像并储存为PNG
+png("Plots/空间共线性分析.png", width = 1920, height = 1080,res = 170)
+grid.arrange(p_diag, p_off, ncol = 2, widths = c(0.4, 0.6))
+```
+
+<img src="D:\GithubP\TeamAssignment2_WanZone_R-CAU_2025spring-Zhao-Li\Plots\空间共线性分析.png">
+左图：展示了单一植被类型内部物种的共现聚集特性，纵轴“归一化偏差”反映聚集程度，数值越高，种内物种越倾向于共同出现。
+
+右图：展示了不同植被类型间的空间关联，纵轴为“中心植被类型”，横轴为“邻域植被类型”，颜色反映共现倾向（红色：正偏差，易共现；蓝色：负偏差，避共现；白色：无明显倾向）。
+
+共现的定义可以简要理解为特征信息共同出现的现象。
+
+通过以上绘图结果，我们可以得到以下结论：
+- “阔叶常绿，开放”“针叶落叶”等，偏差值多在0.5–0.75之间，表明其内部物种有**比较明显的共现倾向**；
+- 种间共现关系仅在少数组合（如“定期淹没，淡水”与阔叶常绿型）中表现出明显倾向，**多数植被间关联较弱**，反映种间关系受环境异质性、物种适应性等多重因素制约，无普遍统一模式
+
+7. **对于核心课题：某地理坐标所在地形向农田转化的潜力预测，我们在确定课题、搜集数据、处理数据、建模这四个步骤中的最后一个步骤停止，原因是时间不足和技术效率较低，我们希望在后续个人课题中对此模型再进行深入探究。**
+
+# 五、参考（References）
+1. 中华人民共和国农业农村部，耕地问题调查，“1996年至2008年，年均净减少超过1000万亩；2009年至2019年，年均净减少超过1100万亩”
+2. 北京师范大学学报（自然科学版），全球耕地与粮食产量的时空演变及空间格局研究 ，“人均耕地面积是衡量全球耕地资源安全状况的重要指标，近60a来，全球人口增长速度过快，远超过耕地增长速度，人均耕地面积呈现减少的趋势”
+3. “Citation:Fick, S.E. and R.J. Hijmans, 2017. WorldClim 2: new 1km resolution climate surfaces for global land areas. International Journal of Climatology 37 (12): 4302 - 4315.”
+4. “Users shall mark the data source and indicate copyright on the product when they use the data. Credit: "Global Map - Global version - Version 1 © Geospatial Information Authority of Japan"” 

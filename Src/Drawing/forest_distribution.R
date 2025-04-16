@@ -64,8 +64,8 @@ png("Plots/forest_distribution.png", width = 924, height = 684, res = 150)
 
 # 绘图
 ggplot() +
+  geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
   geom_tile(data = melted_mat, aes(x = longitude, y = latitude, fill = factor(forest_value))) +
-  geom_sf(data = world, fill = NA, color = "black", size = 0.2) +
   scale_fill_manual(
     values = forest_colors,
     name = "森林类型",
