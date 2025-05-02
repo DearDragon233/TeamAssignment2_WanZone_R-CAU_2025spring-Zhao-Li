@@ -69,6 +69,8 @@ dem_tiles <- lapply(dem_files, rast)
 # 合并图像
 elev_tif <- do.call(mosaic, dem_tiles)
 
+elev_tif[elev_tif == -9999] <- NA
+
 
 # -------------------------------
 # 5. 导入并处理参考图像
