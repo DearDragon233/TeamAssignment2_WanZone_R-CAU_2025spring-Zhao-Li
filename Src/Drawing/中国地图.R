@@ -35,7 +35,7 @@ process_raster_data <- function(raster_path, fact = 5) {
 
 # 主程序部分
 # 读取 TIFF 地图并处理分辨率
-raster_path <- "D:/r course/learnR/Topic4/glc2000_v1_1_Tiff/Tiff/rgb_image.tif"
+raster_path <- "Data/raw/rgb_image.tif"
 processed_raster <- process_raster_data(raster_path)
 
 if (!is.null(processed_raster)) {
