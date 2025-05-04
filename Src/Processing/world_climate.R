@@ -38,6 +38,7 @@ r_stack <- rast(rast_list)
 # 计算每个格点的平均值
 temp_max_tif <- app(r_stack, fun = mean, na.rm = TRUE)
 
+
 # -------------------------------
 # 3. 处理最低温度数据
 # -------------------------------
