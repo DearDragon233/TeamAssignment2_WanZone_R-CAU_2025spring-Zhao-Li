@@ -31,7 +31,7 @@ df <- data.frame(x = x_smooth, y = y_smooth)
 
 ggplot(df, aes(x, y)) +
   geom_abline(linewidth = 1, colour = "red") +
-  annotate("text", x = 12, y = 13.2, label = "y = x", color = "red", size = 5) +
+  annotate("text", x = 12, y = 13.6, label = "y = x", color = "red", size = 5) +
   geom_path(color = "blue", size = 1) +
   theme_minimal() +
   labs(title = "李萨如图（纬度方向的简谐近似）",
@@ -41,3 +41,4 @@ ggplot(df, aes(x, y)) +
 
 # 储存图像
 ggsave("Plots/Lissajous_Figure.png", width = 5, height = 5)
+
