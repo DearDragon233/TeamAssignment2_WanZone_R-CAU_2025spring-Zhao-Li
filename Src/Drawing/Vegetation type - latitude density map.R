@@ -54,7 +54,7 @@ vtldm2 <- ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
   scale_fill_manual(values = c("#006300","#FF7600","#009595","#FF73E7","#B3B3B3","#FF0000","#FFFFFF")) +
   theme_minimal() +
   scale_x_continuous(expand = c(0, 0)) +  # 移除 x 轴额外留白
-  labs(title = "植被分类占陆地比例-纬度密度图",
+  labs(title = "S4.1(a)植被分类占陆地比例-纬度密度图",
        x = "纬度/°",
        y = "植被类型占陆地比例",
        fill = "植被类型")+

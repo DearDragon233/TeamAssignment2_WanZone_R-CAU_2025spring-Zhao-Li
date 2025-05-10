@@ -14,6 +14,7 @@ source("Src/Drawing/terrain_quality_radarchart.R")              # tqr
 source("Src/Drawing/Area pie chart.R")                          # apc
 source("Src/Drawing/cultivated_distribution.R")                 # cd
 source("Src/Drawing/grassland_distribution.R")
+source("Src/Drawing/forest_distribution.R")
 source("Src/Drawing/Lissajous_Figure.R")                        # lf
 source("Src/Drawing/Spatial co-occurrence probability.R")       # scp
 source("Src/Drawing/Farmland distribution.R")                   # fd1 fd2
