@@ -12,7 +12,7 @@ land_fraction_long <- melt(land_fraction_df, id.vars = "Latitude",
                            variable.name = "Vegetation", value.name = "Fraction")
 
 # ggplot，启动！
-ggplot(land_fraction_long, aes(x = Latitude, y = Fraction, fill = Vegetation)) +
+vtldm1 <- ggplot(land_fraction_long, aes(x = Latitude, y = Fraction, fill = Vegetation)) +
   geom_density(stat = "identity", position = "stack",color = NA) +  # 颜色NA为无边框，stack为堆叠图
   scale_fill_manual(values = plant_colors) +
   theme_minimal() +
@@ -25,7 +25,7 @@ ggplot(land_fraction_long, aes(x = Latitude, y = Fraction, fill = Vegetation)) +
   coord_flip()                      # 旋转图像匹配地图方向
 
 # 存储图像
-ggsave("Plots/植被类型占陆地比例-纬度密度图.png",width = 3.11, height = 7)
+ggsave("Plots/植被类型占陆地比例-纬度密度图.png",plot = vtldm1, width = 3.11, height = 7)
 
 # 将分类与矩阵匹配
 categories <- data$class[-20]
@@ -48,7 +48,7 @@ land_fraction_long <- melt(result, id.vars = "latitude",
                            variable.name = "Vegetation", value.name = "Fraction")
 
 # ggplot，启动！
-ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
+vtldm2 <- ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
   geom_density(stat = "identity", position = "stack",color = NA) +  # 颜色NA为无边框，stack为堆叠图
   scale_fill_manual(values = c("#006300","#FF7600","#009595","#FF73E7","#B3B3B3","#FF0000","#FFFFFF")) +
   theme_minimal() +
@@ -66,4 +66,4 @@ ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
   coord_flip()                      # 旋转图像匹配地图方向
 
 # 存储图像
-ggsave("Plots/植被分类占陆地比例-纬度密度图.png",width = 4, height = 7)
+ggsave("Plots/植被分类占陆地比例-纬度密度图.png",plot = vtldm2, width = 4, height = 7)

@@ -62,7 +62,7 @@ df_freq$terrain <- translations
 df_freq$terrain <- factor(df_freq$terrain, levels = unique(df_freq$terrain))
 
 # 绘制主要柱状图
-ggplot(df_freq, aes(x = as.factor(terrain), y = frequency, fill = as.factor(terrain))) +
+tf <- ggplot(df_freq, aes(x = as.factor(terrain), y = frequency, fill = as.factor(terrain))) +
   geom_col() +
   scale_fill_manual(values = df_freq$color, guide = "none") +
   labs(x = "地形值", y = "频率", title = "地形值频率柱状图") +
@@ -70,4 +70,4 @@ ggplot(df_freq, aes(x = as.factor(terrain), y = frequency, fill = as.factor(terr
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 # 导出为PNG
-ggsave("Plots/Terrain_Frequency.png", main_plot, width = 10, height = 6)
+ggsave("Plots/地形值频率柱状图.png",plot = tf, width = 10, height = 6)

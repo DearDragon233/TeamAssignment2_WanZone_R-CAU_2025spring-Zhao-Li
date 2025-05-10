@@ -29,7 +29,7 @@ y_smooth <- fft_smooth(y_data, keep = 5)
 # 绘制李萨如图
 df <- data.frame(x = x_smooth, y = y_smooth)
 
-ggplot(df, aes(x, y)) +
+lf <- ggplot(df, aes(x, y)) +
   geom_abline(linewidth = 1, colour = "red") +
   annotate("text", x = 12, y = 13.6, label = "y = x", color = "red", size = 5) +
   geom_path(color = "blue", size = 1) +
@@ -40,5 +40,5 @@ ggplot(df, aes(x, y)) +
   coord_fixed()
 
 # 储存图像
-ggsave("Plots/Lissajous_Figure.png", width = 5, height = 5)
+ggsave("Plots/Lissajous_Figure.png", plot = lf, width = 5, height = 5)
 

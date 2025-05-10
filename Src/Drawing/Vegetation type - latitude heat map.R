@@ -45,7 +45,7 @@ land_fraction_long <- land_fraction_long %>%
   mutate(Latitude_Group = cut(Latitude, breaks = seq(-90, 90, by = 5), include.lowest = TRUE))
 
 # ggplot，启动！
-ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill = Fraction)) +
+vtlhm <- ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill = Fraction)) +
   geom_tile() + 
   scale_fill_viridis_c(limits = c(0, 1)) +
   theme_minimal() +
@@ -57,4 +57,4 @@ ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill = Fracti
   coord_flip()
 
 # 存储为PNG
-ggsave("Plots/植被类型-纬度分布热图.png",width = 6, height = 7)
+ggsave("Plots/植被类型-纬度分布热图.png",plot = vtlhm, width = 6, height = 7)

@@ -35,7 +35,7 @@ df <- melt(mat_sampled)
 names(df) <- c("latitude", "longitude", "是否为农田")
 
 # 使用 ggplot2 绘制热图
-ggplot() +
+cd <- ggplot() +
   geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
   geom_raster(data = df, mapping = aes(x = longitude, y = latitude, fill = 是否为农田)) +
   scale_fill_manual(values = c("FALSE" = NA, "TRUE" = "#F4A300"), na.value = NA) +
@@ -53,4 +53,4 @@ ggplot() +
   geom_sf(data = world, fill = NA, color = "grey", size = 0.5)
 
 # 保存为图像
-ggsave("Plots/cultivated_distribution.png", width = 9, height = 5)
+ggsave("Plots/cultivated_distribution.png", plot = cd, width = 9, height = 5)

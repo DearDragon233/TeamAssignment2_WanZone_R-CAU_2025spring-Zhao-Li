@@ -162,6 +162,6 @@ p_off <- ggplot(melted_off_diag, aes(x = factor(Neighbor_Type), y = factor(Cente
 
 # 拼接图像并储存为PNG
 png("Plots/空间共线性分析.png", width = 1920, height = 1080,res = 170)
-grid.arrange(p_diag, p_off, ncol = 2, widths = c(0.4, 0.6))
+scp <- grid.arrange(p_diag, p_off, ncol = 2, widths = c(0.4, 0.6))
 dev.off()
 

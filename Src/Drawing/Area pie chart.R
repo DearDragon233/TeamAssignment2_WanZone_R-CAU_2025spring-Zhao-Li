@@ -90,7 +90,7 @@ df <- df %>%
 
 
 # 创建双层饼图
-ggplot() +
+apc <- ggplot() +
   # 内圈饼图（分类）
   geom_bar(data = category_data, 
            aes(x = 0, y = area, fill = category), 
@@ -130,4 +130,4 @@ ggplot() +
   coord_polar(theta = "y", clip = "off")  # 防止标题位置裁剪
 
 # 储存为PNG
-ggsave("Plots/植被与分类面积占比图.png", plot = last_plot(), width = 6, height = 5)
+ggsave("Plots/植被与分类面积占比图.png", plot = apc, width = 6, height = 5)
