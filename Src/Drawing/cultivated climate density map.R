@@ -1,3 +1,9 @@
+# 加载必要包
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(scales)  # 用于百分比格式化
+
 # 筛选农田数据
 df_farm <- subset(df, farm == "farm")
 
@@ -39,7 +45,53 @@ plot_list <- lapply(bins, function(var) {
 })
 
 # 将各图合并显示
-combined_plot <- wrap_plots(plot_list)
-print(combined_plot)
+combined_plot <- wrap_plots(plot_list) +
+  plot_annotation(title = "S5.2.1 农田各维度柱状图")
 
-ggsave(filename = "Plots/农田各维度柱状图.png", width = 10, height = 10)
+ggsave(filename = "Plots/农田各维度柱状图.png", plot = combined_plot, width = 10, height = 10)
+
+
+
+# 1. 对全数据生成分箱变量
+df$lon_bin        <- convert_bin_mid(df$lon, bins = 30)
+df$lat_bin        <- convert_bin_mid(df$lat, bins = 30)
+df$precip_bin     <- convert_bin_mid(df$precip, bins = 30)
+df$elev_bin       <- convert_bin_mid(df$elev, bins = 30)
+df$temp_min_bin   <- convert_bin_mid(df$temp_min, bins = 30)
+df$temp_max_bin   <- convert_bin_mid(df$temp_max, bins = 30)
+df$temp_range_bin <- convert_bin_mid(df$temp_range, bins = 30)
+
+# 定义需要绘制的分箱变量名
+bins <- c("lon_bin", "lat_bin", "precip_bin", "elev_bin",
+          "temp_min_bin", "temp_max_bin", "temp_range_bin")
+
+# 2. 为每个分箱变量计算各分箱中农田面积占总体面积的比例，并生成柱状图
+plot_list <- lapply(bins, function(var) {
+  
+  # 对每个分箱统计：总面积（全部陆地）与农田面积（farm=="farm"）  
+  df_summary <- df %>%
+    group_by(!!sym(var)) %>%
+    summarise(total_area = sum(area, na.rm = TRUE),
+              farm_area  = sum(if_else(farm == "farm", area, 0), na.rm = TRUE)) %>%
+    mutate(ratio = farm_area / total_area)
+  
+  # 提取完整的分箱标签（因子水平），并选择部分作为 x 轴刻度显示（你原代码中每隔 7 个显示一次）
+  levels_vec <- levels(df[[var]])
+  selected_breaks <- levels_vec[seq(1, length(levels_vec), by = 7)]
+  
+  # 生成柱状图（使用 stat="identity" 直接绘制预先计算的比例）
+  ggplot(df_summary, aes_string(x = var, y = "ratio")) +
+    geom_bar(stat = "identity", fill = "coral", alpha = 1, color = "black") +
+    labs(title = paste0(var, " - 农田占比"),
+         y = "农田面积占比") +
+    scale_x_discrete(drop = FALSE, breaks = selected_breaks) +
+    scale_y_continuous(labels = percent) +
+    theme_minimal() +
+    theme(axis.text.y = element_text())
+})
+
+# 3. 合并所有图并保存
+combined_plot <- wrap_plots(plot_list) +
+  plot_annotation(title = "S5.2.1 农田各维度面积比例柱状图")
+
+ggsave(filename = "Plots/农田各维度面积比例柱状图.png", plot = combined_plot, width = 10, height = 10)
