@@ -48,6 +48,7 @@ land_fraction_long <- melt(result, id.vars = "latitude",
                            variable.name = "Vegetation", value.name = "Fraction")
 
 # ggplot，启动！
+# 先画有图例的用于导出
 vtldm2 <- ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
   geom_density(stat = "identity", position = "stack",color = NA) +  # 颜色NA为无边框，stack为堆叠图
   scale_fill_manual(values = c("#006300","#FF7600","#009595","#FF73E7","#B3B3B3","#FF0000","#FFFFFF")) +
@@ -67,3 +68,22 @@ vtldm2 <- ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
 
 # 存储图像
 ggsave("Plots/植被分类占陆地比例-纬度密度图.png",plot = vtldm2, width = 4, height = 7)
+
+# 再保存无图例的用于拼接
+vtldm2 <- ggplot(land_fraction_long, aes(x = Var1, y = Fraction, fill = Var2)) +
+  geom_density(stat = "identity", position = "stack",color = NA) +  # 颜色NA为无边框，stack为堆叠图
+  scale_fill_manual(values = c("#006300","#FF7600","#009595","#FF73E7","#B3B3B3","#FF0000","#FFFFFF")) +
+  theme_minimal() +
+  scale_x_continuous(expand = c(0, 0)) +  # 移除 x 轴额外留白
+  labs(title = "植被分类占比例-纬度密度图",
+       x = "纬度/°",
+       y = "植被类型占陆地比例",
+       fill = "植被类型")+
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.line.y = element_blank(),
+    legend.position = "none"
+  )+                                # 隐藏y轴便于拼接
+  coord_flip()                      # 旋转图像匹配地图方向

@@ -38,16 +38,14 @@ names(df) <- c("latitude", "longitude", "是否为农田")
 cd <- ggplot() +
   geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
   geom_raster(data = df, mapping = aes(x = longitude, y = latitude, fill = 是否为农田)) +
-  scale_fill_manual(values = c("FALSE" = NA, "TRUE" = "#F4A300"), na.value = NA) +
+  scale_fill_manual(values = c("FALSE" = NA, "TRUE" = "#FF73E7"), na.value = NA) +
   labs(title = "世界农田分布图（低分辨率）",
        x = "经度",
        y = "纬度") +
   scale_x_continuous(expand = c(0, 0)) + 
-  scale_y_continuous(expand = c(0, 0)) +
+  scale_y_continuous(limits = c(min(df$latitude), max(df$latitude)), expand = c(0, 0)) +
   theme_minimal() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 14),
-        legend.position = "inside",               # 将图例置于图形内部
+  theme(legend.position = "inside",               # 将图例置于图形内部
         legend.position.inside = c(0.05, 0.2),       # 指定内部位置：靠左下
         legend.justification = c("left", "bottom")) +  # 图例对齐方式
   geom_sf(data = world, fill = NA, color = "grey", size = 0.5)

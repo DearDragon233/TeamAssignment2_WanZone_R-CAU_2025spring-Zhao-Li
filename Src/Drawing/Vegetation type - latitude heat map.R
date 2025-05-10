@@ -49,7 +49,7 @@ vtlhm <- ggplot(land_fraction_long, aes(x = Latitude_Group, y = Vegetation, fill
   geom_tile() + 
   scale_fill_viridis_c(limits = c(0, 1)) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
   labs(title = "植被类型-纬度分布热图",
        x = "纬度区间",
        y = "植被类型",
