@@ -72,7 +72,7 @@ ggplot() +
     breaks = legend_data$forest_value,
     labels = legend_data$forest_name
   ) +
-  labs(x = "经度", y = "纬度", title = "世界森林分布图（低分辨率）") +
+  labs(x = "经度", y = "纬度", title = "S4.4(a)世界森林分布图（低分辨率）") +
   scale_x_continuous(
     breaks = seq(-180, 180, by = 30),
     labels = function(x) {

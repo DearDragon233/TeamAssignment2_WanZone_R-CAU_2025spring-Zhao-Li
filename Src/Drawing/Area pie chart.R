@@ -123,7 +123,7 @@ apc <- ggplot() +
                plant_colors)
   ) +
   # 隐藏图例并修改主题
-  labs(title = "植被与分类面积占比图")+
+  labs(title = "S4.3植被与分类面积占比图")+
   theme_void() +
   theme(legend.position = "none") +
   labs(fill = "Legend") +

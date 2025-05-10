@@ -24,7 +24,7 @@ dominance_ratio <- max(terrain_prob)
 # 计算 Simpson 多样性指数（值越高表示多样性越大）
 simpson <- 1 - sum(terrain_prob^2)
 
-# 正确计算 Gini 系数
+# 计算 Gini 系数
 gini_index <- function(p) {
   n <- length(p)
   diff_matrix <- outer(p, p, FUN = function(x, y) abs(x - y))
@@ -55,6 +55,7 @@ quality_metrics <- rbind(rep(1, 4), rep(0, 4), quality_metrics)
 # 导出图片
 png("Plots/数据质量雷达图.png", width = 924, height = 682, res = 150)
 
+# 绘图
 radarchart(quality_metrics,
            axistype = 1,
            pcol = "darkorange", 
@@ -64,7 +65,7 @@ radarchart(quality_metrics,
            cglty = 1,
            axislabcol = "grey40", 
            vlcex = 0.9,
-           title = "地形质量指标雷达图")
+           title = "S4.2地形质量指标雷达图")
 
 dev.off()
 
@@ -78,7 +79,7 @@ radarchart(quality_metrics,
            cglty = 1,
            axislabcol = "grey40", 
            vlcex = 0.9,
-           title = "地形质量指标雷达图")
+           title = "S4.2地形质量指标雷达图")
 
 # 将刚才的 base 图形复制到 grid 图形系统中
 grid.echo()

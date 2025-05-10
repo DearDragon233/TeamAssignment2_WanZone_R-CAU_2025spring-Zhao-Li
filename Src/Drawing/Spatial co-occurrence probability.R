@@ -138,7 +138,7 @@ p_diag <- ggplot(diag_df, aes(x = Vegetation, y = Normalized_Deviation, fill = N
   geom_bar(stat = "identity") +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
                        limits = c(-1, 1)) +
-  labs(title = "标准化种内共现偏差（归一化后）",
+  labs(title = "S4.6(a)标准化种内共现偏差（归一化后）",
        x = "植被类型", y = "归一化偏差") +
   theme_minimal() +
   theme(axis.text = element_text(size = 10),
@@ -152,7 +152,7 @@ p_off <- ggplot(melted_off_diag, aes(x = factor(Neighbor_Type), y = factor(Cente
   geom_tile(color = "white") +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
                        limits = c(-1, 1)) +
-  labs(title = "标准化种间共现偏差（归一化后）",
+  labs(title = "S4.6(b)标准化种间共现偏差（归一化后）",
        x = "邻域植被类型", y = "中心植被类型",
        fill = "归一化偏差") +
   theme_minimal() +

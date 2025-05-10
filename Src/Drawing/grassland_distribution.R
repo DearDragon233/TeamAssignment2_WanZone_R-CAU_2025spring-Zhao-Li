@@ -38,7 +38,7 @@ ggplot() +
   geom_sf(data = world, fill = "#ECECEC", color = NA, size = 0.5) +
   geom_raster(data = df, mapping = aes(x = longitude, y = latitude, fill = 是否为草地)) +
   scale_fill_manual(values = c("FALSE" = NA, "TRUE" = "Green"), na.value = NA) +
-  labs(title = "世界草地分布图（低分辨率）",
+  labs(title = "S4.4(b)世界草地分布图（低分辨率）",
        x = "经度",
        y = "纬度") +
   scale_x_continuous(expand = c(0, 0)) + 

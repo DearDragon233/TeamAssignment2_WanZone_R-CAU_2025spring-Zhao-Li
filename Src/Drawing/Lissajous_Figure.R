@@ -34,7 +34,7 @@ lf <- ggplot(df, aes(x, y)) +
   annotate("text", x = 12, y = 13.6, label = "y = x", color = "red", size = 5) +
   geom_path(color = "blue", size = 1) +
   theme_minimal() +
-  labs(title = "李萨如图（纬度方向的简谐近似）",
+  labs(title = "S4.5李萨如图（纬度方向的简谐近似）",
        x = paste0("纬度（经度：",colnames(mat)[lat_index1], "）"),
        y = paste0("纬度（经度：",colnames(mat)[lat_index2], "）")) +
   coord_fixed()
