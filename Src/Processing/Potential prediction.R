@@ -83,135 +83,13 @@ source("Src/Assessing/PCA.R")
 # -------------------------------
 # 6. Logistic 回归分析各个维度对农田形成的贡献
 # -------------------------------
-
-# 议将参考水平设为 nonfarm
-df$farm <- factor(df$farm, levels = c("nonfarm", "farm"))
-
-# 构建 logistic 回归模型（使用 binomial 家族）
-logit_model <- glm(farm ~ lon + lat + precip + elev + temp_min + temp_max, 
-                   data = df, 
-                   family = binomial)
-
-# 输出模型摘要，观察各系数的估计、标准误、z值及 p-value
-summary(logit_model)
-
-# 计算优势比（Odds Ratio）及置信区间
-# tidy() 函数返回含有估计值、标准误、置信区间、p-value 等信息，
-# 设置 exponentiate = TRUE 使得估计值以优势比（Odds Ratio）的形式展示
-tidy_logit <- tidy(logit_model, conf.int = TRUE, exponentiate = TRUE)
-print(tidy_logit)
-
-# 使用 ggplot2 可视化各变量优势比及其 95% 置信区间
-# 去除截距项，仅对各自变量进行展示
-tidy_logit_no_int <- tidy_logit[tidy_logit$term != "(Intercept)", ]
-
-# 根据 p-value 添加显著性标记：P<0.001：***, P<0.01：**, P<0.05：*, 否则为空
-tidy_logit_no_int$signif <- cut(tidy_logit_no_int$p.value, 
-                                breaks = c(-Inf, 0.001, 0.01, 0.05, Inf),
-                                labels = c("***", "**", "*", ""),
-                                right = FALSE)
-
-# 绘制优势比条形图
-coef_plot <- ggplot(tidy_logit_no_int, aes(x = reorder(term, estimate), y = estimate)) +
-  geom_point(color = "darkred", size = 3) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "darkblue") +
-  geom_text(aes(label = signif), vjust = 0, size = 5, color = "black") +
-  coord_flip() +  # 交换 x 与 y 轴，使变量名称更易阅读
-  labs(title = "S5.2.3 Logistic 回归优势比",
-       x = "变量", 
-       y = "优势比 (Odds Ratio)") +
-  theme_minimal()
-print(coef_plot)
-
-ggsave(filename = "Plots/逻辑斯蒂回归优势比.png", width = 6, height = 3)
+source("Src/Assessing/Logistic.R")
 
 
 # -------------------------------
 # 7. Logistic 回归分析各个维度对农田形成的贡献（多项式回归 - 引入二次项）
 # -------------------------------
-
-# (1) 进行标准化
-df$lon_scaled       <- scale(df$lon)
-df$lat_scaled       <- scale(df$lat)
-df$precip_scaled    <- scale(df$precip)
-df$elev_scaled      <- scale(df$elev)
-df$temp_min_scaled  <- scale(df$temp_min)
-df$temp_max_scaled  <- scale(df$temp_max)
-
-
-# -------------------------------
-# (2) 欠采样（Down Sampling）处理
-# -------------------------------
-library(caret)  # 用于欠采样函数 downSample()
-
-# 选取标准化后的预测变量和目标变量
-data_for_sampling <- df[, c("lon_scaled", "lat_scaled", "precip_scaled", 
-                            "elev_scaled", "temp_min_scaled", "temp_max_scaled", "farm")]
-
-# 使用 downSample() 进行欠采样，x 为自变量，y 为因变量
-df_balanced <- downSample(x = data_for_sampling[, -ncol(data_for_sampling)], 
-                          y = data_for_sampling$farm)
-
-# downSample 返回的因变量列名默认为 "Class"，这里改回 "farm"
-names(df_balanced)[names(df_balanced) == "Class"] <- "farm"
-
-
-# -------------------------------
-# (4) Logistic 多项式回归（正则化 - 使用 glmnet，LASSO 惩罚）
-# -------------------------------
-library(glmnet)
-
-# 构建设计矩阵，注意 model.matrix 会自动生成截距列，现将其去掉
-x <- model.matrix(farm ~ lon_scaled + I(lon_scaled^2) +
-                    lat_scaled + I(lat_scaled^2) +
-                    precip_scaled + I(precip_scaled^2) +
-                    elev_scaled + I(elev_scaled^2) +
-                    temp_min_scaled + I(temp_min_scaled^2) +
-                    temp_max_scaled + I(temp_max_scaled^2),
-                  data = df_balanced)[,-1]
-
-# 构建二值响应变量：farm 为 "farm" 则记为 1，否则记为 0
-y <- ifelse(df_balanced$farm == "farm", 1, 0)
-
-# 设置随机种子确保结果可重现
-set.seed(123)
-
-# 利用交叉验证构建惩罚性逻辑回归模型（LASSO：alpha=1）
-cv_model <- cv.glmnet(x, y, family = "binomial", alpha = 1)
-best_lambda <- cv_model$lambda.min
-cat("最佳 lambda:", best_lambda, "\n")
-
-# 根据最佳 lambda 拟合最终正则化模型
-reg_model <- glmnet(x, y, family = "binomial", alpha = 1, lambda = best_lambda)
-
-# 查看正则化模型的系数
-coef_reg <- coef(reg_model)
-coef_reg_df <- data.frame(term = rownames(coef_reg), estimate = as.numeric(coef_reg))
-coef_reg_df$odds_ratio <- exp(coef_reg_df$estimate)
-print(coef_reg_df)
-
-# -------------------------------
-# (5) 可视化正则化模型结果（优势比）
-# -------------------------------
-# 去除截距项，仅展示各预测变量的系数
-coef_reg_plot <- coef_reg_df[coef_reg_df$term != "(Intercept)", ]
-coef_reg_plot <- coef_reg_plot[order(coef_reg_plot$estimate), ]
-# 仅保留 term 列中以 "I" 开头的行
-coef_reg_plot <- coef_reg_df[grepl("^I", coef_reg_df$term), ]
-
-reg_plot <- ggplot(coef_reg_plot, aes(x = reorder(term, estimate), y = odds_ratio)) +
-  geom_point(color = "darkgreen", size = 3) +
-  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
-  annotate("text", x = 1, y = max(coef_reg_plot$odds_ratio) * 1.05, 
-           label = "x = 1", color = "red", size = 5, vjust = 0) +
-  coord_flip() +
-  labs(
-    title = "S5.2.4 正则化 Logistic 多项式回归优势比",
-    x = "变量", 
-    y = "优势比 (Odds Ratio)"
-  ) +
-  theme_minimal()
-ggsave(filename = "Plots/逻辑斯蒂多项式回归优势比.png", plot = reg_plot, width = 6, height = 3)
+source("Src/Assessing/polynomial-logistic.R")
 
 
 # -------------------------------
@@ -265,34 +143,19 @@ source("Src/Assessing/ROC curse.R")
 # ------------------------------
 source("Src/Assessing/Prediction density map.R")  
 
-# 利用 test_df 中已经包含 obs_farm 和 farm 字段，以及预测概率变量（pred_farm_prob）：
-test_df$pred_farm_prob <- pred_farm_prob
 
-predictbox <- ggplot(test_df, aes(x = farm, y = pred_farm_prob, fill = farm, colour = farm)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
-  stat_boxplot(geom = "errorbar", width = 0.2) +
-  labs(title = element_blank(),x = "",y = "") +
-  theme_minimal() +
-  theme(legend.position = "none",
-        axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),) +
-  coord_flip()
-  
-#print(predictbox)
-  
-  
-# 利用cowplot包拼接图像
+# ------------------------------
+# 方案3：箱线图
+# ------------------------------
+source("Src/Assessing/boxplot.R")
+
+# 利用cowplot包拼接图像(density 图和箱线图)
 combined_plot <- ggdraw() +
   draw_plot(PredictionDensityMap2, 0, 0, 1, 1) +
   draw_plot(PredictionDensityMap1, 0, 0.1, 1, 0.5) +
   draw_plot(predictbox, 0, 0.4, 1, 0.6) +
   draw_plot(PredictionDensityAixs, 0.01, 0.01, 1, 1) +
   draw_plot(PredictionDensityAixs1, 0.21, 0.1, 1, 0.5)
-  
-  
-  #print(combined_plot)
   
 ggsave("Plots/Access_combined_plot.png", plot = combined_plot, width = 8, height = 6)
 
@@ -453,29 +316,3 @@ farm_potential_no_farmland_manmade[veg_mat == 16 | veg_mat == 22] <- 0
 
 # 作图
 worldraster(farm_potential_no_farmland_manmade, "农田分布潜力预测图(去除原有农田和人造地形)")
-
-
-### （4）第四张图：插值与外推范围分析
-# 计算训练数据中各变量的最小值与最大值（对训练集 train_df）
-vars <- c("precip", "temp_min", "temp_max", "elev", "lon", "lat")
-train_range <- data.frame(
-  var = vars,
-  min = sapply(vars, function(v) min(train_df[[v]], na.rm = TRUE)),
-  max = sapply(vars, function(v) max(train_df[[v]], na.rm = TRUE))
-)
-
-# 定义函数，检查每个网格单元各变量是否落在训练范围内，计算外推比例
-check_extrap <- function(x) {
-  count <- 0
-  for(v in vars) {
-    if(x[[v]] < train_range$min[train_range$var == v] ||
-       x[[v]] > train_range$max[train_range$var == v]) {
-      count <- count + 1
-    }
-  }
-  return(count / length(vars))  # 返回超出比例
-}
-df$extrapolation_ratio <- apply(df[, vars], 1, check_extrap)
-
-table(df$extrapolation_ratio)
-
