@@ -5,7 +5,7 @@ library(ggplot2)      # 用于数据可视化
 library(reshape2)     # 用于矩阵与数据框之间的转换
 library(ranger)       # 用于构建大规模随机森林
 library(tidytext)
-library(patchwork)    # 用于拼合图像
+library(cowplot)    # 用于拼合图像
 library(broom)        # 用于 tidy 模型结果
 library(ggfortify)
 library(doParallel)   # 用于并行计算
@@ -27,13 +27,13 @@ load("Data/Processed/elevation_matrix_reduced.RData") # 海拔信息，变量mat
 elev_mat <- mat                                       # 储存为elev_mat
 load("Data/Processed/Pixel_area_Latitude.RData")      # 像素面积信息，变量area_vector
 
-# 假设所有矩阵均具有相同的维度
+# 所有矩阵均具有相同的维度
 dims <- dim(veg_mat)  # dims[1]: 行数（纬度方向）；dims[2]: 列数（经度方向）
 
 # 将各个矩阵的空间信息转为数据框
-# 构造一个数据框，每一行对应一个网格单元，包括其行、列索引和所有变量值
+# 构造数据框，每一行对应一个网格单元，包括其行、列索引和所有变量值
 df <- data.frame(
-  # 生成行和列的索引（注意：R 中矩阵默认按照列优先存储）
+  # 生成行和列的索引（注意 R 中矩阵默认按照列优先存储）
   row_index = rep(1:dims[1], times = dims[2]),
   col_index = rep(1:dims[2], each = dims[1]),
   
@@ -47,7 +47,7 @@ df <- data.frame(
   lat       = rep(as.numeric(rownames(veg_mat)), times = dims[2])
 )
 
-# 这里根据每个网格单元所属的行号添加对应的像素面积
+# 每个网格单元所属的行号添加对应的像素面积
 df$area <- area_vector[df$row_index]
 
 # 计算温度范围（因为线性，故仅用于作图，不用于分析）
@@ -84,7 +84,7 @@ source("Src/Assessing/PCA.R")
 # 6. Logistic 回归分析各个维度对农田形成的贡献
 # -------------------------------
 
-# 如果还未设置 reference level（默认可能按字母顺序），建议将参考水平设为 nonfarm
+# 议将参考水平设为 nonfarm
 df$farm <- factor(df$farm, levels = c("nonfarm", "farm"))
 
 # 构建 logistic 回归模型（使用 binomial 家族）
@@ -117,13 +117,101 @@ coef_plot <- ggplot(tidy_logit_no_int, aes(x = reorder(term, estimate), y = esti
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "darkblue") +
   geom_text(aes(label = signif), vjust = 0, size = 5, color = "black") +
   coord_flip() +  # 交换 x 与 y 轴，使变量名称更易阅读
-  labs(title = "各维度对农田形成的贡献（Logistic 回归优势比）",
+  labs(title = "S5.2.3 Logistic 回归优势比",
        x = "变量", 
        y = "优势比 (Odds Ratio)") +
   theme_minimal()
 print(coef_plot)
 
 ggsave(filename = "Plots/逻辑斯蒂回归优势比.png", width = 6, height = 3)
+
+
+# -------------------------------
+# 7. Logistic 回归分析各个维度对农田形成的贡献（多项式回归 - 引入二次项）
+# -------------------------------
+
+# (1) 进行标准化
+df$lon_scaled       <- scale(df$lon)
+df$lat_scaled       <- scale(df$lat)
+df$precip_scaled    <- scale(df$precip)
+df$elev_scaled      <- scale(df$elev)
+df$temp_min_scaled  <- scale(df$temp_min)
+df$temp_max_scaled  <- scale(df$temp_max)
+
+
+# -------------------------------
+# (2) 欠采样（Down Sampling）处理
+# -------------------------------
+library(caret)  # 用于欠采样函数 downSample()
+
+# 选取标准化后的预测变量和目标变量
+data_for_sampling <- df[, c("lon_scaled", "lat_scaled", "precip_scaled", 
+                            "elev_scaled", "temp_min_scaled", "temp_max_scaled", "farm")]
+
+# 使用 downSample() 进行欠采样，x 为自变量，y 为因变量
+df_balanced <- downSample(x = data_for_sampling[, -ncol(data_for_sampling)], 
+                          y = data_for_sampling$farm)
+
+# downSample 返回的因变量列名默认为 "Class"，这里改回 "farm"
+names(df_balanced)[names(df_balanced) == "Class"] <- "farm"
+
+
+# -------------------------------
+# (4) Logistic 多项式回归（正则化 - 使用 glmnet，LASSO 惩罚）
+# -------------------------------
+library(glmnet)
+
+# 构建设计矩阵，注意 model.matrix 会自动生成截距列，现将其去掉
+x <- model.matrix(farm ~ lon_scaled + I(lon_scaled^2) +
+                    lat_scaled + I(lat_scaled^2) +
+                    precip_scaled + I(precip_scaled^2) +
+                    elev_scaled + I(elev_scaled^2) +
+                    temp_min_scaled + I(temp_min_scaled^2) +
+                    temp_max_scaled + I(temp_max_scaled^2),
+                  data = df_balanced)[,-1]
+
+# 构建二值响应变量：farm 为 "farm" 则记为 1，否则记为 0
+y <- ifelse(df_balanced$farm == "farm", 1, 0)
+
+# 设置随机种子确保结果可重现
+set.seed(123)
+
+# 利用交叉验证构建惩罚性逻辑回归模型（LASSO：alpha=1）
+cv_model <- cv.glmnet(x, y, family = "binomial", alpha = 1)
+best_lambda <- cv_model$lambda.min
+cat("最佳 lambda:", best_lambda, "\n")
+
+# 根据最佳 lambda 拟合最终正则化模型
+reg_model <- glmnet(x, y, family = "binomial", alpha = 1, lambda = best_lambda)
+
+# 查看正则化模型的系数
+coef_reg <- coef(reg_model)
+coef_reg_df <- data.frame(term = rownames(coef_reg), estimate = as.numeric(coef_reg))
+coef_reg_df$odds_ratio <- exp(coef_reg_df$estimate)
+print(coef_reg_df)
+
+# -------------------------------
+# (5) 可视化正则化模型结果（优势比）
+# -------------------------------
+# 去除截距项，仅展示各预测变量的系数
+coef_reg_plot <- coef_reg_df[coef_reg_df$term != "(Intercept)", ]
+coef_reg_plot <- coef_reg_plot[order(coef_reg_plot$estimate), ]
+# 仅保留 term 列中以 "I" 开头的行
+coef_reg_plot <- coef_reg_df[grepl("^I", coef_reg_df$term), ]
+
+reg_plot <- ggplot(coef_reg_plot, aes(x = reorder(term, estimate), y = odds_ratio)) +
+  geom_point(color = "darkgreen", size = 3) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = 1, y = max(coef_reg_plot$odds_ratio) * 1.05, 
+           label = "x = 1", color = "red", size = 5, vjust = 0) +
+  coord_flip() +
+  labs(
+    title = "S5.2.4 正则化 Logistic 多项式回归优势比",
+    x = "变量", 
+    y = "优势比 (Odds Ratio)"
+  ) +
+  theme_minimal()
+ggsave(filename = "Plots/逻辑斯蒂多项式回归优势比.png", plot = reg_plot, width = 6, height = 3)
 
 
 # -------------------------------
@@ -134,6 +222,7 @@ set.seed(123)  # 固定随机种子以便结果可复现
 sample_index <- sample(1:nrow(df), size = 0.7 * nrow(df))
 train_df <- df[sample_index, ]
 test_df  <- df[-sample_index, ]
+
 
 # -------------------------------
 # 9. 随机森林模型构建
@@ -157,8 +246,9 @@ print(rf_model)
 # -------------------------------
 # 对测试集 test_df 得到预测的概率矩阵
 pred_obj <- predict(rf_model, data = test_df)
+
 # 检查预测结果结构
-str(pred_obj$predictions)  # 应该为一个矩阵，每列为一个类别
+#str(pred_obj$predictions)  # 应该为一个矩阵，每列为一个类别
 
 # 提取“farm”这个类别的概率
 # 注意：确保 test_df$farm 的因子水平与训练时一致（例："farm", "nonfarm"）
@@ -175,10 +265,6 @@ source("Src/Assessing/ROC curse.R")
 # ------------------------------
 source("Src/Assessing/Prediction density map.R")  
 
-
-# -------------------------------
-# 方案4：箱线图
-# -------------------------------
 # 利用 test_df 中已经包含 obs_farm 和 farm 字段，以及预测概率变量（pred_farm_prob）：
 test_df$pred_farm_prob <- pred_farm_prob
 
@@ -212,7 +298,7 @@ ggsave("Plots/Access_combined_plot.png", plot = combined_plot, width = 8, height
 
 
 # -------------------------------
-# 方案5：Loss 曲线检验：训练与测试误差随树数量变化
+# 方案3：Loss 曲线检验：训练与测试误差随树数量变化
 # -------------------------------
 tree_seq <- seq(10, 150, by = 20)
 train_error <- c()
@@ -261,7 +347,7 @@ ggsave("Plots/Loss curve.png", width = 5, height = 5)
 
 
 # -------------------------------
-# 方案6：k折检验
+# 方案4：k折检验
 # -------------------------------
 library(ranger)
 library(pROC)
@@ -291,12 +377,22 @@ for (i in 1:k) {
   preds_cv <- predict(rf_cv, data = test_data)$predictions
   predicted_prob <- preds_cv[, "farm"]
   
+  # 计算 ROC 曲线
+  roc_obj <- roc(response = test_data$farm, 
+                 predictor = predicted_prob,
+                 levels = c("nonfarm", "farm"),  # 指定负类与正类
+                 direction = "<")
+  
+  # 打印 AUC 值
+  auc_val <- auc(roc_obj)
+  
+  
   # 真实标签转换为 0/1
-  actual <- ifelse(test_data$farm == "farm", 1, 0)
+  #actual <- ifelse(test_data$farm == "farm", 1, 0)
   
   # 计算 ROC 曲线和 AUC 值
-  roc_result <- roc(actual, predicted_prob, quiet = TRUE)
-  auc_val <- auc(roc_result)
+  #roc_result <- roc(actual, predicted_prob, quiet = TRUE)
+  #auc_val <- auc(roc_result)
   
   # 保存当前折的 AUC
   cv_auc <- rbind(cv_auc, data.frame(Fold = i, AUC = as.numeric(auc_val)))
