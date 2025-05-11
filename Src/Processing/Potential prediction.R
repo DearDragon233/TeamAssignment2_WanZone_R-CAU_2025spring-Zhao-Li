@@ -249,14 +249,6 @@ for (i in 1:k) {
   # 打印 AUC 值
   auc_val <- auc(roc_obj)
   
-  
-  # 真实标签转换为 0/1
-  #actual <- ifelse(test_data$farm == "farm", 1, 0)
-  
-  # 计算 ROC 曲线和 AUC 值
-  #roc_result <- roc(actual, predicted_prob, quiet = TRUE)
-  #auc_val <- auc(roc_result)
-  
   # 保存当前折的 AUC
   cv_auc <- rbind(cv_auc, data.frame(Fold = i, AUC = as.numeric(auc_val)))
 }
@@ -297,7 +289,7 @@ source("Src/Drawing/world raster map.R")
 
 ### （1）第一张图：潜力预测图
 # 直接作图
-worldraster(farm_potential_matrix, "农田分布潜力预测图")
+worldraster(farm_potential_matrix, "S5.4(a) 农田分布潜力预测图")
 
 
 ### （2）第二张图：除去已有农田
@@ -306,7 +298,7 @@ farm_potential_no_farmland <- farm_potential_matrix
 farm_potential_no_farmland[veg_mat == 16] <- 0
 
 # 作图
-worldraster(farm_potential_no_farmland, "农田分布潜力预测图(去除原有农田)")
+worldraster(farm_potential_no_farmland, "S5.4(b) 农田分布潜力预测图(去除原有农田)")
 
 
 ### （3）第三张图：除去已有农田和人造地形（veg_mat 中编号16和22）
@@ -315,4 +307,115 @@ farm_potential_no_farmland_manmade <- farm_potential_matrix
 farm_potential_no_farmland_manmade[veg_mat == 16 | veg_mat == 22] <- 0
 
 # 作图
-worldraster(farm_potential_no_farmland_manmade, "农田分布潜力预测图(去除原有农田和人造地形)")
+worldraster(farm_potential_no_farmland_manmade, "S5.4(c) 农田分布潜力预测图(去除原有农田和人造地形)")
+
+
+# -------------------------------
+# 13. 潜在农田分布分析
+# -------------------------------
+# 设定预测阈值（为实际农田在模型中的最低概率，高于说明有形成潜力）
+potential_threshold <- min(df$pred_farm_prob[df$farm == "farm"])
+
+# -------------------------------
+# (1) 全球范围内面积统计
+# -------------------------------
+# 总陆地面积（假设 df 已去除海洋等 NA 数据）
+total_area <- sum(df$area)
+
+# 原始农田面积：当前 veg==16 的像素（或 df$farm=="farm"）
+original_farm_area <- sum(df$area[df$veg == 16])
+
+# 潜在农田面积：预测概率 >= 阈值且非原有农田区域
+potential_farm_area <- sum(df$area[(df$pred_farm_prob >= potential_threshold) & (df$veg != 16)])
+
+# 其他土地面积：剩余部分
+other_land_area <- total_area - (original_farm_area + potential_farm_area)
+
+cat("原始农田面积 =", original_farm_area, "\n")
+cat("潜在农田面积 =", potential_farm_area, "\n")
+
+# 计算每个类别所占的百分比，并生成标签文本
+area_df$Pct <- area_df$Area / total_area * 100
+area_df$label <- sprintf("%.1f%%\n%.0f", area_df$Pct, area_df$Area)
+# 针对背景颜色不同，设置标签文字颜色：其他土地用黑色，其它部分用白色
+area_df$label_color <- ifelse(area_df$Category == "其他土地", "black", "white")
+
+# 创建数据框用于饼图绘制
+area_df <- data.frame(
+  Category = c("原始农田", "潜在农田", "其他土地"),
+  Area = c(original_farm_area, potential_farm_area, other_land_area)
+)
+
+# -------------------------------
+# (2) 绘制农田面积饼图
+# -------------------------------
+source("Src/Drawing/Potential farm area pie chart.R")
+
+
+# -------------------------------
+# (3) 绘制潜力地图
+# -------------------------------
+source("Src/Drawing/Original_vs_Potential_Farmland.R")
+
+
+# -------------------------------
+# 3. 每个国家的面积统计
+# -------------------------------
+# 为了根据经纬度将每个网格归到具体国家，这里使用 rworldmap 包
+library(rworldmap)
+library(sp)
+
+# 将 df 转换为空间点数据框
+coordinates(df) <- ~lon+lat
+proj4string(df) <- CRS("+proj=longlat +datum=WGS84")
+
+# 获取世界地图（低分辨率足够用于空间匹配）
+world_map <- getMap(resolution = "low")
+
+# 利用 over 函数匹配每个点所属的国家
+df$country <- over(df, world_map)$ADMIN
+
+# 转换回常规数据框（注意此时 df 多了一列 country）
+df <- as.data.frame(df)
+
+# 利用 dplyr 按国家统计面积
+library(dplyr)
+country_areas <- df %>%
+  # 为了分析，我们可剔除 country 为 NA 的点（通常为海洋区域）
+  filter(!is.na(country)) %>%
+  group_by(country) %>%
+  summarise(
+    Original_Farm_Area = sum(area[veg == 16]),
+    Potential_Farm_Area = sum(area[(pred_farm_prob >= potential_threshold) & (veg != 16)])
+  )
+
+print(country_areas)
+
+# 计算国家总农田面积，并选取前 10 名（你可以根据需要修改 top_n 个数）
+country_areas <- country_areas %>%
+  mutate(Total_Farm_Area = Original_Farm_Area + Potential_Farm_Area) %>%
+  arrange(desc(Total_Farm_Area)) %>%
+  slice(1:10)
+
+# 将数据转换为长格式，以便堆叠显示现有与潜在农田面积
+country_long <- country_areas %>%
+  pivot_longer(cols = c("Original_Farm_Area", "Potential_Farm_Area"),
+               names_to = "Farm_Type",
+               values_to = "Area")
+
+# 为保持 x 轴排序与数据本身的顺序，调整因子水平
+country_long$country <- factor(country_long$country,
+                               levels = country_areas$country)
+
+# 绘制堆叠柱状图，利用不同配色区分现有和潜在农田
+ggplot(country_long, aes(x = country, y = Area, fill = Farm_Type)) +
+  geom_bar(stat = "identity") +
+  labs(title = "前10名国家农田面积（现有+潜在）分布",
+       x = "国家",
+       y = "面积",
+       fill = "农田类型") +
+  scale_fill_manual(values = c("Original_Farm_Area" = "#2E7D32",   # 现有农田：较深绿色
+                               "Potential_Farm_Area" = "#E31A1C"),   # 潜在农田：鲜艳红色
+                    labels = c("现有农田", "潜在农田")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
