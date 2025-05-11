@@ -334,17 +334,18 @@ other_land_area <- total_area - (original_farm_area + potential_farm_area)
 cat("原始农田面积 =", original_farm_area, "\n")
 cat("潜在农田面积 =", potential_farm_area, "\n")
 
+# 创建数据框用于饼图绘制
+area_df <- data.frame(
+  Category = c("原始农田", "潜在农田", "其他土地"),
+  Area = c(original_farm_area, potential_farm_area, other_land_area)
+)
+
 # 计算每个类别所占的百分比，并生成标签文本
 area_df$Pct <- area_df$Area / total_area * 100
 area_df$label <- sprintf("%.1f%%\n%.0f", area_df$Pct, area_df$Area)
 # 针对背景颜色不同，设置标签文字颜色：其他土地用黑色，其它部分用白色
 area_df$label_color <- ifelse(area_df$Category == "其他土地", "black", "white")
 
-# 创建数据框用于饼图绘制
-area_df <- data.frame(
-  Category = c("原始农田", "潜在农田", "其他土地"),
-  Area = c(original_farm_area, potential_farm_area, other_land_area)
-)
 
 # -------------------------------
 # (2) 绘制农田面积饼图
@@ -391,6 +392,7 @@ country_areas <- df %>%
 
 print(country_areas)
 
+library(tidyr)
 # 计算国家总农田面积，并选取前 10 名（你可以根据需要修改 top_n 个数）
 country_areas <- country_areas %>%
   mutate(Total_Farm_Area = Original_Farm_Area + Potential_Farm_Area) %>%

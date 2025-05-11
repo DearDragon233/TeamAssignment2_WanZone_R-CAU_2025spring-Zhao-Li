@@ -5,7 +5,7 @@ library(dplyr)  # 用于整理语法
 density_df <- data.frame(prob_farm = pred_farm_prob,
                          label    = test_df$farm)
 
-# 定义 x 轴完整范围和你想绘制的区间
+# 定义 x 轴完整范围和想绘制的区间
 full_xlim <- c(0, 1)
 lower <- min(density_df$prob_farm[density_df$label == "farm"])
 upper <- max(density_df$prob_farm[density_df$label == "nonfarm"])

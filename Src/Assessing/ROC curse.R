@@ -15,7 +15,7 @@ cat("AUC 值 =", auc_value, "\n")
 
 # 利用 ggroc() 绘制 ROC 曲线，并添加斜对角参考线与图形美化
 ROCcurse <- ggroc(roc_obj, colour = "blue", size = 1.2) +
-  ggtitle(sprintf("ROC 曲线 (AUC = %.3f)", auc_value)) +
+  ggtitle(sprintf("S5.3.1 ROC 曲线 (AUC = %.3f)", auc_value)) +
   geom_abline(intercept = 1, slope = 1,color = "gray") +
   xlab("False Positive Rate") +
   ylab("True Positive Rate") +
@@ -25,4 +25,4 @@ ROCcurse <- ggroc(roc_obj, colour = "blue", size = 1.2) +
   # 添加正方形的边框，并同时删除 panel 外的坐标线及网格线
   theme(panel.border = element_rect(color = "black", fill = NA, size = 1))
 
-print(ROCcurse)
+ggsave("Plots/ROC曲线.png",width = 4, height = 5)
