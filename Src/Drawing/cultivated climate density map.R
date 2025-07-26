@@ -16,16 +16,18 @@ convert_bin_mid <- function(x, bins = 30) {
 }
 
 # 利用 convert_bin_mid() 生成各变量的分箱，并直接用中点数字作为因子标签
-df_farm$lon_bin        <- convert_bin_mid(df_farm$lon, bins = 30)
-df_farm$lat_bin        <- convert_bin_mid(df_farm$lat, bins = 30)
-df_farm$precip_bin     <- convert_bin_mid(df_farm$precip, bins = 30)
-df_farm$elev_bin       <- convert_bin_mid(df_farm$elev, bins = 30)
-df_farm$temp_min_bin   <- convert_bin_mid(df_farm$temp_min, bins = 30)
-df_farm$temp_max_bin   <- convert_bin_mid(df_farm$temp_max, bins = 30)
-df_farm$temp_range_bin <- convert_bin_mid(df_farm$temp_range, bins = 30)
+df_farm$lon_bin         <- convert_bin_mid(df_farm$lon, bins = 30)
+df_farm$lat_bin         <- convert_bin_mid(df_farm$lat, bins = 30)
+df_farm$precip_bin      <- convert_bin_mid(df_farm$precip, bins = 30)
+df_farm$elev_bin        <- convert_bin_mid(df_farm$elev, bins = 30)
+df_farm$pop_bin         <- convert_bin_mid(df_farm$pop, bins = 30)
+df_farm$slope_bin       <- convert_bin_mid(df_farm$slope, bins = 30)
+df_farm$temp_min_bin    <- convert_bin_mid(df_farm$temp_min, bins = 30)
+df_farm$temp_max_bin    <- convert_bin_mid(df_farm$temp_max, bins = 30)
+df_farm$temp_range_bin  <- convert_bin_mid(df_farm$temp_range, bins = 30)
 
 # 定义需要绘制的分箱变量名
-bins <- c("lon_bin", "lat_bin", "precip_bin", "elev_bin",
+bins <- c("lon_bin", "lat_bin", "precip_bin", "elev_bin", "pop_bin", "slope_bin",
           "temp_min_bin", "temp_max_bin", "temp_range_bin")
 
 # 为每个变量生成一个柱状图，使用aes映射中增加weight=area，实现以农田面积为直方图高度
@@ -57,12 +59,14 @@ df$lon_bin        <- convert_bin_mid(df$lon, bins = 30)
 df$lat_bin        <- convert_bin_mid(df$lat, bins = 30)
 df$precip_bin     <- convert_bin_mid(df$precip, bins = 30)
 df$elev_bin       <- convert_bin_mid(df$elev, bins = 30)
+df$pop_bin        <- convert_bin_mid(df$pop, bins = 30)
+df$slope_bin      <- convert_bin_mid(df$slope, bins = 30)
 df$temp_min_bin   <- convert_bin_mid(df$temp_min, bins = 30)
 df$temp_max_bin   <- convert_bin_mid(df$temp_max, bins = 30)
 df$temp_range_bin <- convert_bin_mid(df$temp_range, bins = 30)
 
 # 定义需要绘制的分箱变量名
-bins <- c("lon_bin", "lat_bin", "precip_bin", "elev_bin",
+bins <- c("lon_bin", "lat_bin", "precip_bin", "elev_bin", "pop_bin", "slope_bin",
           "temp_min_bin", "temp_max_bin", "temp_range_bin")
 
 # 2. 为每个分箱变量计算各分箱中农田面积占总体面积的比例，并生成柱状图

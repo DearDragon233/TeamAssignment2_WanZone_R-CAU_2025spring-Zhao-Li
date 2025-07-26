@@ -2,7 +2,7 @@
 df$farm <- factor(df$farm, levels = c("nonfarm", "farm"))
 
 # 构建 logistic 回归模型（使用 binomial 家族）
-logit_model <- glm(farm ~ lon + lat + precip + elev + temp_min + temp_max, 
+logit_model <- glm(farm ~ lon + lat + precip + elev + temp_min + temp_max + pop + slope, 
                    data = df, 
                    family = binomial)
 

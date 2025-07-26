@@ -5,11 +5,12 @@ library(ggplot2)      # 用于数据可视化
 library(reshape2)     # 用于矩阵与数据框之间的转换
 library(ranger)       # 用于构建大规模随机森林
 library(tidytext)
-library(cowplot)    # 用于拼合图像
+library(cowplot)      # 用于拼合图像
 library(broom)        # 用于 tidy 模型结果
 library(ggfortify)
 library(doParallel)   # 用于并行计算
 library(foreach)      # 用于并行循环
+library(terra)
 
 # -------------------------------
 # 2. 数据准备
@@ -23,8 +24,10 @@ load("Data/Processed/tmin_mat.RData")                 # 最低气温信息，变
 temp_min_mat <- mat                                   # 储存为temp_min_mat
 load("Data/Processed/tmax_mat.RData")                 # 最高气温信息，变量mat
 temp_max_mat <- mat                                   # 储存为temp_max_mat
-load("Data/Processed/elevation_matrix_reduced.RData") # 海拔信息，变量mat
+load("Data/Processed/elevation_mat.RData")            # 海拔信息，变量mat
 elev_mat <- mat                                       # 储存为elev_mat
+load("Data/Processed/population_mat.RData")           # 人口密度信息，变量mat
+pop_mat <- mat                                        # 储存为pop_mat
 load("Data/Processed/Pixel_area_Latitude.RData")      # 像素面积信息，变量area_vector
 
 # 所有矩阵均具有相同的维度
@@ -43,6 +46,7 @@ df <- data.frame(
   temp_min  = as.vector(temp_min_mat),
   temp_max  = as.vector(temp_max_mat),
   elev      = as.vector(elev_mat),
+  pop       = as.vector(pop_mat),
   lon       = rep(as.numeric(colnames(veg_mat)), each = dims[1]),
   lat       = rep(as.numeric(rownames(veg_mat)), times = dims[2])
 )
@@ -53,6 +57,51 @@ df$area <- area_vector[df$row_index]
 # 计算温度范围（因为线性，故仅用于作图，不用于分析）
 df$temp_range <- df$temp_max - df$temp_min
 
+# 计算并添加坡度（Slope）变量
+# 获取经纬度信息
+lon_coords <- as.numeric(colnames(elev_mat))
+lat_coords <- as.numeric(rownames(elev_mat))
+
+# 创建栅格对象
+elev_rast <- rast(t(elev_mat), crs = "EPSG:4326") # 使用 t() 转置矩阵
+
+# 设置栅格的地理范围 (extent)
+ext(elev_rast) <- c(min(lon_coords), max(lon_coords), min(lat_coords), max(lat_coords))
+
+# 3. 使用 terrain() 函数计算坡度
+# unit="degrees" 表示坡度单位为度
+# neighbors=8 表示使用8个邻近像元进行计算，更精确
+slope_rast <- terra::terrain(elev_rast, v = "slope", unit = "degrees", neighbors = 8)
+
+# 4. 将计算出的坡度栅格转换回矩阵，然后添加到主数据框 df 中
+slope_mat <- t(as.matrix(slope_rast, wide = TRUE)) # 使用 t() 再次转置回来
+
+# 检查维度是否与原始矩阵一致 (可选，但推荐)
+# dim(slope_mat)
+# dim(elev_mat)
+
+# 将坡度矩阵向量化，并添加到 df 数据框中
+# 确保使用与创建 df 时相同的向量化顺序（按列）
+df$slope <- as.vector(slope_mat)
+
+# 5. 清理和检查
+# 计算坡度时，栅格的边缘像元可能会产生 NA 值，因为它们没有足够的邻居
+# 我们需要检查并处理这些新产生的 NA
+cat("添加坡度变量前的数据行数:", nrow(df), "\n")
+df <- na.omit(df) # 移除包含任何 NA 的行（这也会处理坡度计算产生的 NA）
+cat("移除坡度计算中产生的 NA 后，剩余数据行数:", nrow(df), "\n")
+
+# 查看新变量的摘要信息
+summary(df$slope)
+
+# (可选) 绘制坡度地图，直观感受一下结果
+# slope_map_plot <- ggplot(df, aes(x = lon, y = lat, fill = slope)) +
+#   geom_raster() +
+#   scale_fill_viridis_c(name = "Slope (Degrees)", direction = -1) +
+#   coord_quickmap() +
+#   theme_minimal() +
+#   ggtitle("Global Slope Distribution")
+# print(slope_map_plot)
 
 # -------------------------------
 # 3. 构造目标变量：农田分布
@@ -107,10 +156,11 @@ test_df  <- df[-sample_index, ]
 # -------------------------------
 # 模型目的：利用环境变量预测每个网格是否适宜形成农田
 # 此处使用的预测变量为：precip, temp_min, temp_max, elev, lon 与 lat
-rf_model <- ranger(farm ~ precip + temp_min + temp_max + elev + lon + lat,
+rf_model <- ranger(farm ~ precip + temp_min + temp_max + elev + lon + lat + pop + slope,
                    data = df,
                    num.trees = 100,
                    probability = TRUE,
+                   importance = 'permutation',
                    num.threads = parallel::detectCores()) #并行优化
 
 # 保存为.RData文件待用
