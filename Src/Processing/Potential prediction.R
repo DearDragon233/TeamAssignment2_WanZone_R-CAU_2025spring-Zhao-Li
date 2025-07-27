@@ -132,7 +132,7 @@ source("Src/Assessing/PCA.R")
 # -------------------------------
 # 6. Logistic 回归分析各个维度对农田形成的贡献
 # -------------------------------
-source("Src/Assessing/Logistic.R")
+source("Src/Assessing/PCA-Logistic.R")
 
 
 # -------------------------------
@@ -330,6 +330,8 @@ rownames(farm_potential_matrix) <- rownames(veg_mat)
 
 # 保存为.RData文件待用
 save(farm_potential_matrix, file = "Data/Processed/Potential prediction.RData")
+
+
 # -------------------------------
 # 12. 可视化农田分布潜力地图
 # -------------------------------
