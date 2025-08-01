@@ -11,6 +11,8 @@ library(ggfortify)
 library(doParallel)   # 用于并行计算
 library(foreach)      # 用于并行循环
 library(terra)
+library(pROC)
+library(dplyr)
 
 # -------------------------------
 # 2. 数据准备
@@ -130,7 +132,7 @@ source("Src/Assessing/PCA.R")
 
 
 # -------------------------------
-# 6. Logistic 回归分析各个维度对农田形成的贡献
+# 6. Logistic 回归分析各个主成分对农田形成的贡献
 # -------------------------------
 source("Src/Assessing/PCA-Logistic.R")
 
@@ -309,6 +311,12 @@ cat("平均AUC：", round(mean_auc, 3), "\n")
 
 
 # -------------------------------
+# 方案6：偏依赖图
+# -------------------------------
+source("Src/Assessing/VIP-PDP.R")
+
+
+# -------------------------------
 # 11. 全区域预测农田分布潜力
 # -------------------------------
 # 对数据框中全体网格进行预测
@@ -331,6 +339,7 @@ rownames(farm_potential_matrix) <- rownames(veg_mat)
 # 保存为.RData文件待用
 save(farm_potential_matrix, file = "Data/Processed/Potential prediction.RData")
 
+save(df, file = "Data/Processed/df.RData")
 
 # -------------------------------
 # 12. 可视化农田分布潜力地图
@@ -362,114 +371,148 @@ farm_potential_no_farmland_manmade[veg_mat == 16 | veg_mat == 22] <- 0
 worldraster(farm_potential_no_farmland_manmade, "S5.4(c) 农田分布潜力预测图(去除原有农田和人造地形)")
 
 
-# -------------------------------
-# 13. 潜在农田分布分析
-# -------------------------------
-# 设定预测阈值（为实际农田在模型中的最低概率，高于说明有形成潜力）
-potential_threshold <- min(df$pred_farm_prob[df$farm == "farm"])
+# ==============================================================================
+# 13: 潜在农田分布分析
+# ==============================================================================
+# 加载 pROC 包
+library(pROC)
+
+# ------------------------------------------
+# (1) 在测试集上计算最优阈值
+# ------------------------------------------
+
+# 创建 ROC 对象
+roc_obj <- roc(response = test_df$farm, 
+               predictor = pred_farm_prob,
+               levels = c("nonfarm", "farm"))
+
+# 计算最佳阈值。"youden"方法旨在最大化(灵敏度+特异度-1)
+# 这是一个在分类问题中平衡两类错误的常用方法
+optimal_threshold <- coords(roc_obj, "best", ret = "threshold", best.method = "youden")$threshold
+
+# 打印AUC值和计算出的最优阈值
+cat("模型的 AUC 值为:", round(auc(roc_obj), 4), "\n")
+cat("基于Youden指数计算出的最优潜力阈值为:", optimal_threshold, "\n")
+
 
 # -------------------------------
-# (1) 全球范围内面积统计
+# (2) 全球范围内面积统计
 # -------------------------------
-# 总陆地面积（假设 df 已去除海洋等 NA 数据）
-total_area <- sum(df$area)
+# 总陆地面积
+total_area <- sum(df$area, na.rm = TRUE)
 
-# 原始农田面积：当前 veg==16 的像素（或 df$farm=="farm"）
-original_farm_area <- sum(df$area[df$veg == 16])
+# 原始农田面积
+original_farm_area <- sum(df$area[df$veg == 16], na.rm = TRUE)
 
-# 潜在农田面积：预测概率 >= 阈值且非原有农田区域
-potential_farm_area <- sum(df$area[(df$pred_farm_prob >= potential_threshold) & (df$veg != 16)])
+# 使用 optimal_threshold 进行计算
+potential_farm_area <- sum(df$area[(df$pred_farm_prob >= optimal_threshold) & (df$veg != 16)], na.rm = TRUE)
 
-# 其他土地面积：剩余部分
+# 其他土地面积
 other_land_area <- total_area - (original_farm_area + potential_farm_area)
 
-cat("原始农田面积 =", original_farm_area, "\n")
-cat("潜在农田面积 =", potential_farm_area, "\n")
+cat("原始农田面积 =", format(original_farm_area, scientific = FALSE, big.mark = ","), "m²\n")
+cat("潜在农田面积 (基于最优阈值) =", format(potential_farm_area, scientific = FALSE, big.mark = ","), "m²\n")
 
-# 创建数据框用于饼图绘制
+# 创建用于饼图的数据框
 area_df <- data.frame(
   Category = c("原始农田", "潜在农田", "其他土地"),
   Area = c(original_farm_area, potential_farm_area, other_land_area)
 )
 
-# 计算每个类别所占的百分比，并生成标签文本
+# 计算百分比
 area_df$Pct <- area_df$Area / total_area * 100
-area_df$label <- sprintf("%.1f%%\n%.0f", area_df$Pct, area_df$Area)
-# 针对背景颜色不同，设置标签文字颜色：其他土地用黑色，其它部分用白色
+
+# 定义单位换算因子
+unit_conversion <- 1e12 # 百万km²
+
+# 生成新的标签，包含新单位
+area_df$label <- sprintf("%.1f%%\n%.1f 百万km²", 
+                         area_df$Pct, 
+                         area_df$Area / unit_conversion)
+
+# 标签颜色逻辑保持不变
 area_df$label_color <- ifelse(area_df$Category == "其他土地", "black", "white")
 
-
-# -------------------------------
-# (2) 绘制农田面积饼图
-# -------------------------------
+# 调用饼图绘制脚本
 source("Src/Drawing/Potential farm area pie chart.R")
 
 
 # -------------------------------
-# (3) 绘制潜力地图
+# (3) 每个国家的面积统计
 # -------------------------------
-source("Src/Drawing/Original_vs_Potential_Farmland.R")
-
-
-# -------------------------------
-# 3. 每个国家的面积统计
-# -------------------------------
-# 为了根据经纬度将每个网格归到具体国家，这里使用 rworldmap 包
-library(rworldmap)
-library(sp)
-
-# 将 df 转换为空间点数据框
-coordinates(df) <- ~lon+lat
-proj4string(df) <- CRS("+proj=longlat +datum=WGS84")
-
-# 获取世界地图（低分辨率足够用于空间匹配）
-world_map <- getMap(resolution = "low")
-
-# 利用 over 函数匹配每个点所属的国家
-df$country <- over(df, world_map)$ADMIN
-
-# 转换回常规数据框（注意此时 df 多了一列 country）
-df <- as.data.frame(df)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
 # 利用 dplyr 按国家统计面积
-library(dplyr)
 country_areas <- df %>%
-  # 为了分析，我们可剔除 country 为 NA 的点（通常为海洋区域）
   filter(!is.na(country)) %>%
   group_by(country) %>%
   summarise(
-    Original_Farm_Area = sum(area[veg == 16]),
-    Potential_Farm_Area = sum(area[(pred_farm_prob >= potential_threshold) & (veg != 16)])
+    Original_Farm_Area = sum(area[veg == 16], na.rm = TRUE),
+    Potential_Farm_Area = sum(area[(pred_farm_prob >= optimal_threshold) & (veg != 16)], na.rm = TRUE)
   )
 
-print(country_areas)
-
-library(tidyr)
-# 计算国家总农田面积，并选取前 10 名（你可以根据需要修改 top_n 个数）
-country_areas <- country_areas %>%
+# 计算总面积并排序，选取前10名
+top_10_countries <- country_areas %>%
   mutate(Total_Farm_Area = Original_Farm_Area + Potential_Farm_Area) %>%
   arrange(desc(Total_Farm_Area)) %>%
   slice(1:10)
 
-# 将数据转换为长格式，以便堆叠显示现有与潜在农田面积
-country_long <- country_areas %>%
+# 转换为长格式以便绘图
+country_long <- top_10_countries %>%
+  select(-Total_Farm_Area) %>% # 移除总面积列，以免干扰 pivot
   pivot_longer(cols = c("Original_Farm_Area", "Potential_Farm_Area"),
                names_to = "Farm_Type",
                values_to = "Area")
 
-# 为保持 x 轴排序与数据本身的顺序，调整因子水平
+# 调整因子水平以保持排序
 country_long$country <- factor(country_long$country,
-                               levels = country_areas$country)
+                               levels = top_10_countries$country)
 
-# 绘制堆叠柱状图，利用不同配色区分现有和潜在农田
-ggplot(country_long, aes(x = country, y = Area, fill = Farm_Type)) +
-  geom_bar(stat = "identity") +
+# 1. 定义单位换算因子
+unit_conversion <- 1e11
+
+# 2. 准备用于 geom_text 的标签数据
+label_data <- country_long %>%
+  filter(Area > 0) %>%
+  group_by(country) %>%
+  arrange(country, desc(Farm_Type)) %>%
+  mutate(
+    Area_in_new_unit = Area / unit_conversion,
+    y_pos = cumsum(Area) - 0.5 * Area,
+    label_text = sprintf("%.1f", Area_in_new_unit)
+  )
+
+# 3. 绘制堆叠柱状图
+country_potential <- ggplot(country_long, aes(x = country, y = Area, fill = Farm_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(data = label_data, 
+            aes(y = y_pos, label = label_text), 
+            color = "white", # 标签颜色
+            size = 3.5) +   # 标签大小
   labs(title = "前10名国家农田面积（现有+潜在）分布",
+       subtitle = "基于最优ROC阈值进行潜力评估",
        x = "国家",
-       y = "面积",
+       # 【修改】更新Y轴标题以反映新单位
+       y = "面积（单位：十万平方千米）",
        fill = "农田类型") +
-  scale_fill_manual(values = c("Original_Farm_Area" = "#2E7D32",   # 现有农田：较深绿色
-                               "Potential_Farm_Area" = "#E31A1C"),   # 潜在农田：鲜艳红色
+  scale_y_continuous(
+    labels = function(x) {
+      x / unit_conversion
+    }
+  ) +
+  
+  scale_fill_manual(values = c("Original_Farm_Area" = "#2E7D32", 
+                               "Potential_Farm_Area" = "#E31A1C"),
                     labels = c("现有农田", "潜在农田")) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# 打印图像
+print(country_potential)
+
+# 保存
+ggsave(filename = "Plots/国家农田格局.png", plot = country_potential, width = 10, height = 7, dpi = 300)

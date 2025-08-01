@@ -5,6 +5,8 @@ df$lon_scaled       <- scale(df$lon)
 df$lat_scaled       <- scale(df$lat)
 df$precip_scaled    <- scale(df$precip)
 df$elev_scaled      <- scale(df$elev)
+df$pop_scaled       <- scale(df$pop)
+df$slope_scaled     <- scale(df$slope)
 df$temp_min_scaled  <- scale(df$temp_min)
 df$temp_max_scaled  <- scale(df$temp_max)
 
@@ -16,7 +18,8 @@ library(caret)  # 用于欠采样函数 downSample()
 
 # 选取标准化后的预测变量和目标变量
 data_for_sampling <- df[, c("lon_scaled", "lat_scaled", "precip_scaled", 
-                            "elev_scaled", "temp_min_scaled", "temp_max_scaled", "farm")]
+                            "elev_scaled", "pop_scaled","slope_scaled", 
+                            "temp_min_scaled", "temp_max_scaled", "farm")]
 
 # 使用 downSample() 进行欠采样，x 为自变量，y 为因变量
 df_balanced <- downSample(x = data_for_sampling[, -ncol(data_for_sampling)], 
@@ -36,6 +39,8 @@ x <- model.matrix(farm ~ lon_scaled + I(lon_scaled^2) +
                     lat_scaled + I(lat_scaled^2) +
                     precip_scaled + I(precip_scaled^2) +
                     elev_scaled + I(elev_scaled^2) +
+                    pop_scaled + I(pop_scaled^2) +
+                    slope_scaled + I(slope_scaled^2) +
                     temp_min_scaled + I(temp_min_scaled^2) +
                     temp_max_scaled + I(temp_max_scaled^2),
                   data = df_balanced)[,-1]
